@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Copy 4 elements to &apos;Lib&apos;&#x0D;&#x0A;- Original project: &apos;BnrCoinJar&apos;&#x0D;&#x0A;- Destination element: &apos;Lib&apos;&#x0D;&#x0A;- Original elements:&#x0D;&#x0A;     bnrCtl.properties&#x0D;&#x0A;     log4j-bnrCtlJava.properties&#x0D;&#x0A;     BnrCtl.ini&#x0D;&#x0A;     Read.repository" description="Copy files" element1="lib/bnrCtl.properties" element2="lib/log4j-bnrCtlJava.properties" element3="lib/BnrCtl.ini" element4="lib/Read.repository" files="4" flags="589830" folders="0" id="org.eclipse.jdt.ui.copy" policy="org.eclipse.jdt.ui.copyResources" stamp="1571736438507" target="/TestKolkata/Lib" units="0" version="1.0"/>
+</session>

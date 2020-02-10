@@ -1,0 +1,543 @@
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.TabFolder;
+import org.eclipse.swt.widgets.TabItem;
+import org.eclipse.swt.widgets.Text;
+//import org.eclipse.wb.swt.SWTResourceManager;
+
+//import Cris.SmartCard;
+
+public class MainWindow {
+
+	protected Shell shell;
+	private Text txtResponse;
+
+	private String strOSType;
+	private Text text;
+
+	
+
+	
+	public static void main(String[] args) {
+		try {
+
+			MainWindow window = new MainWindow();
+			window.open();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shell.open();
+		shell.layout();
+		while (!shell.isDisposed())
+		{
+			if (!display.readAndDispatch())
+			{
+				display.sleep();
+			}
+		}
+	}
+
+	public static byte GetBCC(byte[] p, int n)
+	{
+		byte ch;
+		int i;
+		byte crc = (byte) 0x00;
+
+		for (i = 0; i < n; i++) {
+			ch = p[i];
+			crc = (byte) (ch ^ crc);
+		}
+		return crc;
+	}
+
+	public static String GetErrorDesc(byte byE1, byte byE0) {
+		String strRes = "";
+
+		switch (String.format("%02x%02x", byE1, byE0)) {
+		case "0000":
+			strRes = "Reception of undefined command";
+			break;
+		case "0001":
+			strRes = "Command parameter error";
+			break;
+		}
+
+		return strRes;
+	}
+
+	/**
+	 * Create contents of the window.
+	 */
+	protected void createContents() {
+		shell = new Shell();
+		shell.setSize(779, 697);
+		shell.setText("SWT Application");
+
+		strOSType = System.getProperty("os.name").toLowerCase();
+		shell.setLayout(null);
+
+		txtResponse = new Text(shell, SWT.BORDER | SWT.WRAP | SWT.V_SCROLL | SWT.MULTI);
+		txtResponse.setBounds(20, 372, 721, 250);
+		//txtResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+
+		Label lblResponse = new Label(shell, SWT.NONE);
+		lblResponse.setBounds(10, 341, 72, 25);
+		lblResponse.setText("Response");
+		//lblResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+
+		Label lblStatus = new Label(shell, SWT.NONE);
+		lblStatus.setBounds(10, 628, 44, 18);
+		lblStatus.setText("Status-");
+		//lblStatus.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+
+		Label lblStatusVal = new Label(shell, SWT.NONE);
+		lblStatusVal.setBounds(60, 628, 527, 28);
+		lblStatusVal.setText("");
+		//lblStatusVal.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+
+		Button btnClear = new Button(shell, SWT.NONE);
+		btnClear.setBounds(534, 336, 219, 30);
+		btnClear.setText("Clear");
+		//btnClear.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnClear, true, true);
+
+		TabFolder tabFolder = new TabFolder(shell, SWT.NONE);
+		tabFolder.setBounds(10, 10, 911, 320);
+		//formToolkit.adapt(tabFolder);
+		//formToolkit.paintBordersFor(tabFolder);
+
+		TabItem SmartCard = new TabItem(tabFolder, SWT.NONE);
+		SmartCard.setText("SmartCard");
+	
+		
+		SmartCard.setText("Card Dispenser");
+
+		Composite composite = new Composite(tabFolder, SWT.NONE);
+		SmartCard.setControl(composite);
+		//formToolkit.paintBordersFor(composite);
+		// cmbBaudRate.setVisible(false);
+
+		Button btnConnectNote = new Button(composite, SWT.NONE);
+		btnConnectNote.setBounds(10, 46, 218, 30);
+		//btnConnect.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnConnectNote.setText("ConnectDevice Note");
+		//formToolkit.adapt(btnConnect, true, true);
+
+		Button btnGetNativeLibVersion = new Button(composite, SWT.NONE);
+		btnGetNativeLibVersion.setBounds(234, 46, 218, 30);
+		btnGetNativeLibVersion.setText("GetNativeLibVersion");
+		//btnGetscarddevnativelibversion.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnGetscarddevnativelibversion, true, true);
+
+		Button btnCurrencyFWVersion = new Button(composite, SWT.NONE);
+		btnCurrencyFWVersion.setBounds(458, 46, 218, 30);
+		btnCurrencyFWVersion.setText("GetCurrencyFWVersion");
+		//btnGetscardreaderfwversion.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnGetscardreaderfwversion, true, true);
+
+		Button btnDeviceCoin = new Button(composite, SWT.NONE);
+		btnDeviceCoin.setBounds(10, 82, 218, 30);
+		btnDeviceCoin.setText("ConnectDevice Coin");
+		//btnGetdevicestatus.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnGetdevicestatus, true, true);
+
+		Button btnAcceptCurrentCurrency = new Button(composite, SWT.NONE);
+		btnAcceptCurrentCurrency.setBounds(234, 82, 218, 30);
+		btnAcceptCurrentCurrency.setText("AcceptCurrentCurrency");
+		//btnEnablecardacceptance.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnEnablecardacceptance, true, true);
+
+		Button btnDisablecardacceptance = new Button(composite, SWT.NONE);
+		btnDisablecardacceptance.setBounds(458, 82, 218, 30);
+		btnDisablecardacceptance.setText("ReturnCurrentCurrency");
+		//btnDisablecardacceptance.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnDisablecardacceptance, true, true);
+
+		Button btnReturnAcceptedCurrency = new Button(composite, SWT.NONE);
+		btnReturnAcceptedCurrency.setBounds(458, 118, 218, 30);
+		btnReturnAcceptedCurrency.setText("ReturnAcceptedCurrency");
+		//btnRejectcard.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnRejectcard, true, true);
+
+		Button btnStackAccepted = new Button(composite, SWT.NONE);
+		btnStackAccepted.setBounds(234, 138, 218, 30);
+		btnStackAccepted.setText("StackedAcceptedCurrency");
+		//btnReturncard.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnReturncard, true, true);
+
+		Button btnGetValidCurrency = new Button(composite, SWT.NONE);
+		btnGetValidCurrency.setBounds(10, 134, 218, 39);
+		btnGetValidCurrency.setText("GetValidCurrency");
+		//btnDispensecard.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnDispensecard, true, true);
+
+		Button btnIscardinchannel = new Button(composite, SWT.NONE);
+		btnIscardinchannel.setBounds(10, 179, 218, 39);
+		btnIscardinchannel.setText("IsNoteRemoved");
+		//btnActivatecard.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnActivatecard, true, true);
+
+		Button btnAcceptCurrencies = new Button(composite, SWT.NONE);
+		btnAcceptCurrencies.setBounds(234, 226, 218, 30);
+		btnAcceptCurrencies.setText("AcceptCurrencies");
+		//btnWriteultralightpage.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnWriteultralightpage, true, true);
+
+		Button btnDisconnectDevice = new Button(composite, SWT.NONE);
+		btnDisconnectDevice.setBounds(458, 226, 218, 30);
+		btnDisconnectDevice.setText("GetAcceptedAmount");
+		//btnAcceptcard.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//formToolkit.adapt(btnAcceptcard, true, true);
+
+		Button btnCoin = new Button(composite, SWT.RADIO);
+		btnCoin.setText("Coin Acceptor");
+		//btnCardReaderWriter.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnCoin.setBounds(285, 10, 114, 20);
+		//formToolkit.adapt(btnCardReaderWriter, true, true);
+
+		Button btnCashAcceptor = new Button(composite, SWT.RADIO);
+		btnCashAcceptor.setText("CashAcceptor");
+		//btnCardDispenser.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnCashAcceptor.setBounds(140, 10, 120, 20);
+		//formToolkit.adapt(btnCardDispenser, true, true);
+		btnCashAcceptor.setSelection(true);
+
+		Label lblNewLabel = new Label(composite, SWT.NONE);
+		//lblNewLabel.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblNewLabel.setBounds(10, 10, 114, 20);
+		//formToolkit.adapt(lblNewLabel, true, true);
+		lblNewLabel.setText("Card Device Type");
+		
+		Button btnBoth = new Button(composite, SWT.RADIO);
+		btnBoth.setText("Both");
+		btnBoth.setBounds(428, 10, 114, 20);
+		
+		text = new Text(composite, SWT.BORDER);
+		text.setBounds(91, 235, 137, 21);
+		
+		Button btnEnabledenomination = new Button(composite, SWT.NONE);
+		btnEnabledenomination.setText("EnableDenomination");
+		btnEnabledenomination.setBounds(234, 179, 218, 39);
+		
+		TabItem tbtmNewItem = new TabItem(tabFolder, SWT.NONE);
+		tbtmNewItem.setText("New Item");
+		
+		Composite composite_1 = new Composite(tabFolder, SWT.NONE);
+		tbtmNewItem.setControl(composite_1);
+		
+		Button btnNewButton = new Button(composite_1, SWT.NONE);
+		btnNewButton.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+			}
+		});
+		btnNewButton.setBounds(184, 47, 158, 46);
+		btnNewButton.setText("New Button");
+		
+		Button button = new Button(composite_1, SWT.NONE);
+		button.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+			}
+		});
+		button.setText("New Button");
+		button.setBounds(355, 49, 158, 46);
+		
+		Button button_1 = new Button(composite_1, SWT.NONE);
+		button_1.setText("New Button");
+		button_1.setBounds(533, 49, 158, 46);
+		
+		
+		// formToolkit.adapt(btnBlock, true, true);
+
+		// Open button functioning
+		btnConnectNote.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				
+			}
+		});
+
+		// Clear button functioning
+		btnClear.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				try {
+					txtResponse.setText("");
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnGetNativeLibVersion.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					lblStatusVal.setText("");
+
+					if (btnCashAcceptor.getSelection() == true)
+					{
+						txtResponse.setText("*** Cash Dispenser ***\r\n");
+					}
+					else
+					{
+						txtResponse.setText("*** Cash Reader Writer ***\r\n");
+					}
+
+				}
+				catch (Exception e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnCurrencyFWVersion.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				try {
+					lblStatusVal.setText("");
+
+					if (btnCashAcceptor.getSelection() == true) {
+						txtResponse.setText("*** Cash Dispenser ***\r\n");
+					} else {
+						txtResponse.setText("*** Cash Reader Writer ***\r\n");
+					}
+					txtResponse.append("GetSCardDevFWVersion\r\n");
+
+					String strRet = "";
+
+					if (btnCashAcceptor.getSelection() == true) {
+						strRet = objSmartCardDispenser.GetSCardDevFWVersion();
+					} else {
+						strRet = objSmartCardReaderWriter.GetSCardDevFWVersion();
+					}
+					txtResponse.append("\r\nReturn value- " + strRet);
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnDeviceCoin.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				
+				
+			}
+		});
+
+		btnAcceptCurrentCurrency.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				try {
+					lblStatusVal.setText("");
+
+					if (btnCashAcceptor.getSelection() == true) {
+						txtResponse.setText("*** Cash Dispenser ***\r\n");
+					} else {
+						txtResponse.setText("*** Cash Reader Writer ***\r\n");
+					}
+					txtResponse.append("EnableCardAcceptance\r\n");
+
+					int iRet = -1;
+					if (btnCashAcceptor.getSelection() == true) {
+						iRet = objSmartCardDispenser.EnableCardAcceptance(10000);
+					} else {
+						iRet = objSmartCardReaderWriter.EnableCardAcceptance(10000);
+					}
+					txtResponse.append("\r\nReturn value- " + iRet);
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnDisablecardacceptance.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				try {
+					lblStatusVal.setText("");
+
+					if (btnCashAcceptor.getSelection() == true) {
+						txtResponse.setText("*** Cash Dispenser ***\r\n");
+					} else {
+						txtResponse.setText("*** Cash Reader Writer ***\r\n");
+					}
+					txtResponse.append("DisableCardAcceptance\r\n");
+
+					int iRet = -1;
+					if (btnCashAcceptor.getSelection() == true) {
+						iRet = objSmartCardDispenser.DisableCardAcceptance(10000);
+					} else {
+						iRet = objSmartCardReaderWriter.DisableCardAcceptance(10000);
+					}
+					txtResponse.append("\r\nReturn value- " + iRet);
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnGetValidCurrency.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				try {
+					lblStatusVal.setText("");
+
+					if (btnCashAcceptor.getSelection() == true) {
+						txtResponse.setText("*** Cash Dispenser ***\r\n");
+					} else {
+						txtResponse.setText("*** Cash Reader Writer ***\r\n");
+					}
+					txtResponse.append("DispenseCard\r\n");
+
+					int iRet = -1;
+					if (btnCashAcceptor.getSelection() == true) {
+						iRet = objSmartCardDispenser.DispenseCard(10000);
+					} else {
+						iRet = objSmartCardReaderWriter.DispenseCard(10000);
+					}
+					txtResponse.append("\r\nReturn value- " + iRet);
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnStackAccepted.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				try
+				{
+					
+				}
+				catch (Exception e1) 
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnReturnAcceptedCurrency.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				try
+				{
+					
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnIscardinchannel.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				try {
+					lblStatusVal.setText("");
+
+					if (btnCashAcceptor.getSelection() == true) {
+						txtResponse.setText("*** Cash Dispenser ***\r\n");
+					} else {
+						txtResponse.setText("*** Cash Reader Writer ***\r\n");
+					}
+					txtResponse.append("IsCardInChannel\r\n");
+
+					int iRet = -1;
+					if (btnCashAcceptor.getSelection() == true) {
+						iRet = objSmartCardDispenser.IsCardInChannel(10000);
+					} else {
+						iRet = objSmartCardReaderWriter.IsCardInChannel(10000);
+					}
+					txtResponse.append("\r\nReturn value- " + iRet);
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnAcceptCurrencies.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				try
+				{
+					lblStatusVal.setText("");
+
+					if (btnCashAcceptor.getSelection() == true)
+					{
+						txtResponse.setText("*** Cash Dispenser ***\r\n");
+					}
+					else
+					{
+						txtResponse.setText("*** Cash Reader Writer ***\r\n");
+					}
+					
+				}
+				catch (Exception e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+
+		btnDisconnectDevice.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					
+				}
+				catch (Exception e1) 
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+	}
+
+	public static byte[] hexStringToByteArray(String s) {
+		try {
+			byte[] b = new byte[s.length() / 2];
+			for (int i = 0; i < b.length; i++) {
+				int index = i * 2;
+				int v = Integer.parseInt(s.substring(index, index + 2), 16);
+				b[i] = (byte) v;
+			}
+			return b;
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+	}
+}

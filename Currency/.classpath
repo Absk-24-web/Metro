@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry exported="true" kind="lib" path="Lib/org.eclipse.swt.gtk.linux.x86_3.104.2.v20160212-1350.jar"/>
+	<classpathentry kind="lib" path="Lib/AVRMApi.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/AVRM"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

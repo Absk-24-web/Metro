@@ -1,0 +1,304 @@
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
+
+import jssc.SerialPort;
+import jssc.SerialPortList;
+import org.eclipse.swt.graphics.Point;
+
+public class MainWindow 
+{
+
+	protected Shell shell;
+	private Text txtResponse;
+	private String strOSType;
+	private static SerialPort serialPort;
+	private Text text;
+	private Text text_1;
+	
+	/*private CommPortIdentifier portIdentifier = null;
+	private CommPort commPort = null;
+	private SerialPort serialPort = null;
+	private ParallelPort parallelPort = null;*/
+
+	/**
+	 * Launch the application.
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		try {
+			
+			MainWindow window = new MainWindow();
+			window.open();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}	
+	
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shell.open();
+		shell.layout();
+		while (!shell.isDisposed()) {
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
+	}
+	
+	public static byte GetBCC(byte []p,int n)
+	{
+		byte  ch;
+		int	i; 
+		byte crc = (byte)0x00;
+	
+		for(i=0;i<n;i++)
+		{
+			ch = p[i];				
+			crc = (byte)(ch ^ crc);
+		}		
+		return crc;
+	}
+	
+	public static String GetErrorDesc(byte byE1, byte byE0)
+	{
+		String strRes="";
+		
+		switch(String.format("%02x%02x", byE1, byE0))
+		{
+			case "0000": strRes = "Reception of undefined command";	break;
+			case "0001": strRes = "Command parameter error";	break;
+		}
+		
+		return strRes;
+	}
+
+	/**
+	 * Create contents of the window.
+	 */
+	protected void createContents() 
+	{
+		shell = new Shell();
+		shell.setSize(new Point(678, 800));
+		shell.setSize(750, 750);
+		shell.setText("SWT Application");
+		
+		strOSType = System.getProperty("os.name").toLowerCase();
+		
+		txtResponse = new Text(shell, SWT.BORDER | SWT.V_SCROLL | SWT.MULTI);
+		//txtResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		txtResponse.setBounds(20, 456, 687, 211);
+		
+		Label lblResponse = new Label(shell, SWT.NONE);
+		lblResponse.setText("Response");
+		//lblResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblResponse.setBounds(10, 301, 72, 25);
+		/*if(strOSType.indexOf("win") >= 0)
+			cmbCOMPort.setItems(new String[] {"Select", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"});
+		else
+			cmbCOMPort.setItems(new String[] {"Select", "/dev/ttyS0", "/dev/ttyS1", "/dev/ttyS2", "/dev/ttyS3", "/dev/ttyS4", "/dev/ttyS5", "/dev/ttyS6", "/dev/ttyS7", "/dev/ttyS8", "/dev/ttyS9"});*/
+		
+		Label lblStatusVal = new Label(shell, SWT.NONE);
+		lblStatusVal.setText("");
+		//lblStatusVal.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStatusVal.setBounds(33, 673, 674, 28);
+		
+		Button btnClear = new Button(shell, SWT.NONE);		
+		btnClear.setText("Clear");
+		//btnClear.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnClear.setBounds(418, 301, 87, 30);
+		
+		Button btnReset = new Button(shell, SWT.NONE);
+		btnReset.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				
+				
+			}
+		});
+		btnReset.setText("IsNoteRemoved");
+		//btnReset.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnReset.setBounds(340, 10, 156, 46);
+		//formToolkit.adapt(btnLivePacket, true, true);
+		
+		Button btnConnectDeviceNote = new Button(shell, SWT.NONE);
+		btnConnectDeviceNote.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				
+			}
+		});
+		btnConnectDeviceNote.setText("Connect Device Note");
+		//btnInitializeDevice.setForeground(SWTResourceManager.getColor(SWT.COLOR_BLACK));
+		//btnInitializeDevice.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnConnectDeviceNote.setBounds(10, 10, 159, 46);
+		
+		Button btnD = new Button(shell, SWT.NONE);
+		btnD.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				
+				
+			}
+		});
+		btnD.setText("AcceptCurrencies");
+		btnD.setBounds(248, 241, 138, 46);
+		
+		Button btnGetFwVersion = new Button(shell, SWT.NONE);
+		btnGetFwVersion.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				
+				
+			}
+		});
+		btnGetFwVersion.setText("Disconnect Device Coin");
+		btnGetFwVersion.setBounds(175, 62, 159, 46);
+		
+		Button btnPrintLogo = new Button(shell, SWT.NONE);
+		btnPrintLogo.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				
+			}
+		});
+		btnPrintLogo.setText("Print Logo");
+		btnPrintLogo.setBounds(175, 114, 159, 46);
+		
+		Button btnStartPrint = new Button(shell, SWT.NONE);
+		btnStartPrint.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				
+			}
+		});
+		btnStartPrint.setText("AcceptCurrentCurrency");
+		btnStartPrint.setBounds(10, 114, 159, 46);
+		
+		Button btnCutPaper = new Button(shell, SWT.NONE);
+		btnCutPaper.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				
+				
+			}
+		});
+		btnCutPaper.setText("Disconnect Device Note");
+		btnCutPaper.setBounds(10, 62, 159, 46);
+		
+		Button btnPrinttextline = new Button(shell, SWT.NONE);
+		btnPrinttextline.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				
+			}
+		});
+		btnPrinttextline.setText("GetDeviceStatus");
+		btnPrinttextline.setBounds(340, 62, 156, 46);
+		
+		Button btnPrintblankline = new Button(shell, SWT.NONE);
+		btnPrintblankline.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				
+			}
+		});
+		btnPrintblankline.setText("GetValidCurrency");
+		btnPrintblankline.setBounds(340, 114, 156, 46);
+		
+		text = new Text(shell, SWT.BORDER);
+		text.setBounds(20, 257, 108, 30);
+		
+		Label lblNewLabel = new Label(shell, SWT.NONE);
+		lblNewLabel.setBounds(33, 236, 87, 15);
+		lblNewLabel.setText("Enter Amount");
+		
+		Button btnStackacceptedcurrency = new Button(shell, SWT.NONE);
+		btnStackacceptedcurrency.setText("StackAcceptedCurrency");
+		btnStackacceptedcurrency.setBounds(324, 166, 172, 46);
+		
+		Button btnClearjammedcurrecny = new Button(shell, SWT.NONE);
+		btnClearjammedcurrecny.setText("ClearJammedCurrency");
+		btnClearjammedcurrecny.setBounds(167, 166, 151, 46);
+		
+		Button btnAcceptcurrentcurrencyNote = new Button(shell, SWT.NONE);
+		btnAcceptcurrentcurrencyNote.setText("AcceptCurrentCurrency Note");
+		btnAcceptcurrentcurrencyNote.setBounds(502, 10, 205, 46);
+		
+		Button btnAcceptcurrentcurrencyCoin = new Button(shell, SWT.NONE);
+		btnAcceptcurrentcurrencyCoin.setText("AcceptCurrentCurrency Coin");
+		btnAcceptcurrentcurrencyCoin.setBounds(502, 62, 205, 46);
+		
+		Button btnReturncurrentcurrencyNote = new Button(shell, SWT.NONE);
+		btnReturncurrentcurrencyNote.setText("ReturnCurrentCurrency Note");
+		btnReturncurrentcurrencyNote.setBounds(502, 114, 205, 46);
+		
+		Button btnReturncurrentcurrencyCoin = new Button(shell, SWT.NONE);
+		btnReturncurrentcurrencyCoin.setText("ReturnCurrentCurrency Coin");
+		btnReturncurrentcurrencyCoin.setBounds(502, 166, 205, 46);
+		
+		Button btnGetacceptedamount = new Button(shell, SWT.NONE);
+		btnGetacceptedamount.setText("GetAcceptedAmount");
+		btnGetacceptedamount.setBounds(556, 241, 151, 46);
+		
+		Button btnConnectDeviceCoin = new Button(shell, SWT.NONE);
+		btnConnectDeviceCoin.setText("Connect Device Coin");
+		btnConnectDeviceCoin.setBounds(175, 10, 159, 46);
+		
+		text_1 = new Text(shell, SWT.BORDER);
+		text_1.setBounds(134, 257, 108, 30);
+		
+		Label lblDevicetype = new Label(shell, SWT.NONE);
+		lblDevicetype.setText("DeviceType");
+		lblDevicetype.setBounds(147, 236, 87, 15);
+		
+		Button btnReturnacceptcurrencies = new Button(shell, SWT.NONE);
+		btnReturnacceptcurrencies.setText("ReturnAcceptCurrencies");
+		btnReturnacceptcurrencies.setBounds(392, 241, 158, 46);
+		shell.setTabList(new Control[]{btnClear, txtResponse});
+		
+		// Clear button functioning
+		btnClear.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					txtResponse.setText("");
+				}
+				catch(Exception e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+	}
+}
+

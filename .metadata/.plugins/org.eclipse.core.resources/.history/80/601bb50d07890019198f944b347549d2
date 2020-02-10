@@ -1,0 +1,11 @@
+public class FormatExample2
+{  
+    public static void main(String[] args)
+    {  
+            
+      System.loadLibrary("C:\\Users\\df dev11\\Desktop\\Teu-Reader_Final\\Teu-Reader\\ReaderLibrary\\Lib\\libReaderLibrary.so"); 
+        System.out.println(System.getProperty("java.library.path"));  
+       
+    }  
+  
+}

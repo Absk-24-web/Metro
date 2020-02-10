@@ -1,0 +1,2071 @@
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
+
+import jssc.SerialPort;
+import jssc.SerialPortList;
+
+public class MainWindow implements InterfaceCoinAcceptor 
+{
+
+	protected Shell shell;
+	public Text txtResponse;
+	private String strOSType;
+	private Label lblComPort;
+	private Combo cmbCOMPort;
+	private Label lblBaudRate;
+	private Combo cmbBaudRate;
+	private static SerialPort serialPort;
+	private CoinAcceptorResponse objCRD;
+	private CRDResponse objRes;
+	
+	
+
+	/**
+	 * Launch the application.
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		try {
+			
+			MainWindow window = new MainWindow();
+			window.open();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}	
+	
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shell.open();
+		shell.layout();
+		while (!shell.isDisposed()) {
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
+	}
+
+	protected void createContents() 
+	{
+		shell = new Shell();
+		shell.setSize(662, 647);
+		shell.setText("SWT Application");
+		
+		strOSType = System.getProperty("os.name").toLowerCase();
+		
+		Label lblInterfaceType = new Label(shell, SWT.NONE);
+		//lblInterfaceType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblInterfaceType.setBounds(20, 20, 99, 25);
+		lblInterfaceType.setText("Interface Type");
+		
+		Combo cmbInterfaceType = new Combo(shell, SWT.READ_ONLY);
+		cmbInterfaceType.setItems(new String[] {"Select", "Parallel", "Serial", "USB"});
+		cmbInterfaceType.select(0);
+		//cmbInterfaceType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbInterfaceType.setBounds(125, 17, 113, 28);
+		
+		txtResponse = new Text(shell, SWT.BORDER | SWT.V_SCROLL | SWT.MULTI);
+		//txtResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		txtResponse.setBounds(10, 402, 621, 165);
+		
+		Label lblResponse = new Label(shell, SWT.NONE);
+		lblResponse.setText("Response");
+		//lblResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblResponse.setBounds(10, 371, 72, 25);
+		
+		lblComPort = new Label(shell, SWT.NONE);
+		lblComPort.setText("Port");
+		//lblComPort.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblComPort.setBounds(293, 20, 36, 25);
+		lblComPort.setVisible(false);
+		
+		cmbCOMPort = new Combo(shell, SWT.READ_ONLY);
+		if(strOSType.indexOf("win") >= 0)
+			cmbCOMPort.setItems(new String[] {"Select", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"});
+		else
+			cmbCOMPort.setItems(new String[] {"Select", "/dev/ttyS0", "/dev/ttyS1", "/dev/ttyS2", "/dev/ttyS3", "/dev/ttyS4", "/dev/ttyS5", "/dev/ttyS6", "/dev/ttyS7", "/dev/ttyS8", "/dev/ttyS9"});
+		cmbCOMPort.select(0);
+		//cmbCOMPort.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbCOMPort.setBounds(335, 17, 72, 28);
+		cmbCOMPort.setVisible(false);
+		
+		lblBaudRate = new Label(shell, SWT.NONE);
+		lblBaudRate.setText("Baud Rate");
+		//lblBaudRate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblBaudRate.setBounds(439, 20, 78, 25);
+		lblBaudRate.setVisible(false);
+		
+		cmbBaudRate = new Combo(shell, SWT.READ_ONLY);
+		cmbBaudRate.setItems(new String[] {"Select", "115200", "9600", "19200"});
+		cmbBaudRate.select(0);
+		//cmbBaudRate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbBaudRate.setBounds(523, 17, 108, 23);
+		cmbBaudRate.setVisible(false);
+		
+		Button btnOpen = new Button(shell, SWT.NONE);
+		//btnOpen.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnOpen.setBounds(17, 60, 110, 30);
+		btnOpen.setText("Initialize");
+		
+		Button btnClose = new Button(shell, SWT.NONE);
+		//btnClose.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnClose.setText("Deinitialize");
+		btnClose.setBounds(473, 60, 158, 30);
+		btnClose.setEnabled(false);
+		
+		Label lblStatus = new Label(shell, SWT.NONE);
+		lblStatus.setText("Status-");
+		//lblStatus.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStatus.setBounds(10, 573, 44, 25);
+		
+		Label lblStatusVal = new Label(shell, SWT.NONE);
+		lblStatusVal.setText("");
+		//lblStatusVal.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStatusVal.setBounds(55, 531, 576, 28);
+		
+		Button btnClear = new Button(shell, SWT.NONE);		
+		btnClear.setText("Clear");
+		//btnClear.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnClear.setBounds(544, 366, 87, 30);
+		
+		Button btnStartCoinAccept = new Button(shell, SWT.NONE);
+		btnStartCoinAccept.setEnabled(false);
+		btnStartCoinAccept.setText("Start Coin Accept");
+		//btnStartCoinAccept.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnStartCoinAccept.setBounds(133, 60, 158, 30);
+		
+		Button btnStopCoinAccept = new Button(shell, SWT.NONE);
+		btnStopCoinAccept.setText("Stop Coin Accept");
+		//btnStopCoinAccept.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnStopCoinAccept.setEnabled(false);
+		btnStopCoinAccept.setBounds(133, 96, 158, 30);
+		
+		Button btnAccept = new Button(shell, SWT.NONE);
+		btnAccept.setEnabled(false);
+		btnAccept.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.AcceptCoin();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										if(objRes.strResponse.contains("01 41"))
+											txtResponse.append("Accept Success:- "+objRes.strResponse+"\r\n");	
+										else
+											txtResponse.append("Accept Failure:- "+objRes.strResponse+"\r\n");						
+									}
+								}
+							} catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			}
+		});
+		btnAccept.setText("Accept Coin Escrow\r\n");
+		btnAccept.setBounds(297, 60, 170, 30);
+		
+		Button btnRejectCoinEscrow = new Button(shell, SWT.NONE);
+		btnRejectCoinEscrow.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.RejectCoin();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										if(objRes.strResponse.contains("01 52"))
+											txtResponse.append("Reject Success:- "+objRes.strResponse+"\r\n");	
+										else
+											txtResponse.append("Reject Failure:- "+objRes.strResponse+"\r\n");	
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			}
+		});
+		btnRejectCoinEscrow.setEnabled(false);
+		btnRejectCoinEscrow.setText("Reject Coin Escrow");
+		btnRejectCoinEscrow.setBounds(297, 96, 170, 30);
+		
+		Button btnLowerdoorStatus = new Button(shell, SWT.NONE);
+		btnLowerdoorStatus.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LowerDoorStatus();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										if(objRes.strResponse.contains("01 4F"))
+											txtResponse.append("LowerDoor Open:- "+objRes.strResponse+"\r\n");	
+										else if(objRes.strResponse.contains("01 43"))
+											txtResponse.append("LowerDoor Close:- "+objRes.strResponse+"\r\n");	
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+		});
+		btnLowerdoorStatus.setText("LowerDoor Status");
+		btnLowerdoorStatus.setBounds(297, 132, 170, 30);
+		
+		Button btnUpperdoorStatus = new Button(shell, SWT.NONE);
+		btnUpperdoorStatus.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.UpperDoorStatus();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										if(objRes.strResponse.contains("01 4F"))
+											txtResponse.append("UpperDoor Open:- "+objRes.strResponse+"\r\n");	
+										else if(objRes.strResponse.contains("01 43"))
+											txtResponse.append("UpperDoor Close:- "+objRes.strResponse+"\r\n");	
+									}
+								}
+							} catch (NumberFormatException e1) 
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+		});
+		btnUpperdoorStatus.setText("UpperDoor Status");
+		btnUpperdoorStatus.setBounds(133, 132, 158, 30);
+		
+		Button btnSafedoorStatus = new Button(shell, SWT.NONE);
+		btnSafedoorStatus.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.SafeDoorStatus();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										if(objRes.strResponse.contains("01 4F"))
+											txtResponse.append("SafeDoor Open:- "+objRes.strResponse+"\r\n");	
+										else if(objRes.strResponse.contains("01 43"))
+											txtResponse.append("SafeDoor Close:- "+objRes.strResponse+"\r\n");	
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+		});
+		btnSafedoorStatus.setText("SafeDoor Status");
+		btnSafedoorStatus.setBounds(473, 132, 158, 30);
+		
+		Button btnBuzzertest = new Button(shell, SWT.NONE);
+		btnBuzzertest.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.BuzzerTest();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+			
+		});
+		btnBuzzertest.setText("Buzzer Test");
+		btnBuzzertest.setBounds(473, 96, 158, 30);
+		
+		Button btnLed = new Button(shell, SWT.NONE);
+		btnLed.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Token_ON();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+		});
+		btnLed.setText("LED_Token ON");
+		btnLed.setBounds(133, 168, 158, 30);
+		
+		Button btnUpperdoorStaus = new Button(shell, SWT.NONE);
+		btnUpperdoorStaus.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Token_OFF();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										/*if(objRes.strResponse.contains("01 FF"))
+											txtResponse.append("LED OFF FAILURE:- "+objRes.strResponse+"\r\n");	
+										else
+											txtResponse.append("LED OFF SUCCESS:- "+objRes.strResponse+"\r\n");	*/
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+		});
+		btnUpperdoorStaus.setText("LED_Token OFF");
+		btnUpperdoorStaus.setBounds(296, 168, 171, 30);
+		
+		Button btnLed_1 = new Button(shell, SWT.NONE);
+		btnLed_1.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Cash_ON();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+		});
+		btnLed_1.setText("LED_Cash ON");
+		btnLed_1.setBounds(473, 168, 158, 30);
+		
+		Button btnLed_2 = new Button(shell, SWT.NONE);
+		btnLed_2.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Card_ON();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+		});
+		btnLed_2.setText("LED_Card ON");
+		btnLed_2.setBounds(133, 204, 158, 30);
+		
+		Button btnLed_3 = new Button(shell, SWT.NONE);
+		btnLed_3.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Card_OFF();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										/*if(objRes.strResponse.contains("01 FF"))
+											txtResponse.append("LED OFF FAILURE:- "+objRes.strResponse+"\r\n");	
+										else
+											txtResponse.append("LED OFF SUCCESS:- "+objRes.strResponse+"\r\n");	*/
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+		});
+		btnLed_3.setText("LED_Card OFF");
+		btnLed_3.setBounds(296, 204, 171, 30);
+		
+		Button btnLed_4 = new Button(shell, SWT.NONE);
+		btnLed_4.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Cash_OFF();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										/*if(objRes.strResponse.contains("01 FF"))
+											txtResponse.append("LED OFF FAILURE:- "+objRes.strResponse+"\r\n");	
+										else
+											txtResponse.append("LED OFF SUCCESS:- "+objRes.strResponse+"\r\n");	*/
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			}
+		});
+		btnLed_4.setText("LED_Cash OFF");
+		btnLed_4.setBounds(473, 204, 158, 30);
+		
+		Button btnLedcoinOn = new Button(shell, SWT.NONE);
+		btnLedcoinOn.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Coin_ON();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			
+			
+			}
+		});
+		btnLedcoinOn.setText("LED_Coin ON");
+		btnLedcoinOn.setBounds(133, 240, 158, 30);
+		
+		Button btnLedlighttkOn = new Button(shell, SWT.NONE);
+		btnLedlighttkOn.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+
+
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Light_TK_ON();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			
+			
+			}
+		});
+		btnLedlighttkOn.setText("LED_Light_TK ON");
+		btnLedlighttkOn.setBounds(133, 276, 158, 30);
+		
+		Button btnLedcoinOff = new Button(shell, SWT.NONE);
+		btnLedcoinOff.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+
+
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Coin_OFF();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										/*if(objRes.strResponse.contains("01 FF"))
+											txtResponse.append("LED OFF FAILURE:- "+objRes.strResponse+"\r\n");	
+										else
+											txtResponse.append("LED OFF SUCCESS:- "+objRes.strResponse+"\r\n");	*/
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			
+			
+			}
+		});
+		btnLedcoinOff.setText("LED_Coin OFF");
+		btnLedcoinOff.setBounds(296, 240, 171, 30);
+		
+		Button btnLedlighttkOff = new Button(shell, SWT.NONE);
+		btnLedlighttkOff.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_Light_TK_OFF();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										/*if(objRes.strResponse.contains("01 FF"))
+											txtResponse.append("LED OFF FAILURE:- "+objRes.strResponse+"\r\n");	
+										else
+											txtResponse.append("LED OFF SUCCESS:- "+objRes.strResponse+"\r\n");	*/
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			
+			}
+		});
+		btnLedlighttkOff.setText("LED_Light_TK OFF");
+		btnLedlighttkOff.setBounds(296, 276, 171, 30);
+		
+		Button btnLedrpOn = new Button(shell, SWT.NONE);
+		btnLedrpOn.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_RP_ON();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			
+			}
+		});
+		btnLedrpOn.setText("LED_RP ON");
+		btnLedrpOn.setBounds(473, 240, 158, 30);
+		
+		Button btnLedrpOff = new Button(shell, SWT.NONE);
+		btnLedrpOff.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_RP_OFF();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										/*if(objRes.strResponse.contains("01 FF"))
+											txtResponse.append("LED OFF FAILURE:- "+objRes.strResponse+"\r\n");	
+										else
+											txtResponse.append("LED OFF SUCCESS:- "+objRes.strResponse+"\r\n");	*/
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			
+			}
+		});
+		btnLedrpOff.setText("LED_RP OFF");
+		btnLedrpOff.setBounds(473, 276, 158, 30);
+		
+		Button btnAlloff = new Button(shell, SWT.NONE);
+		btnAlloff.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+
+
+
+				   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.LED_All_OFF();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										/*if(objRes.strResponse.contains("01 FF"))
+											txtResponse.append("LED OFF FAILURE:- "+objRes.strResponse+"\r\n");	
+										else
+											txtResponse.append("LED OFF SUCCESS:- "+objRes.strResponse+"\r\n");	*/
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			
+			}
+		});
+		btnAlloff.setText("ALL LED OFF");
+		btnAlloff.setBounds(473, 312, 158, 30);
+		
+		Button btnDuraceOn = new Button(shell, SWT.NONE);
+		btnDuraceOn.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.DURACE_ON();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			
+			
+			
+			
+			
+			}
+		});
+		btnDuraceOn.setText("DURACE ON");
+		btnDuraceOn.setBounds(133, 312, 158, 30);
+		
+		Button btnDuraceOff = new Button(shell, SWT.NONE);
+		btnDuraceOff.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.DURACE_OFF();//(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			
+			}
+		});
+		btnDuraceOff.setText("DURACE OFF");
+		btnDuraceOff.setBounds(297, 312, 171, 30);
+		shell.setTabList(new Control[]{cmbInterfaceType, cmbCOMPort, cmbBaudRate, btnOpen, btnClose, btnClear, txtResponse});
+		
+		// Interface selection functioning
+		cmbInterfaceType.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				//txtResponse.setText(cmbInterfaceType.getText());
+				switch(cmbInterfaceType.getText())
+				{
+					case "Serial":
+					{
+						cmbCOMPort.removeAll();
+						cmbCOMPort.add("Select");
+						
+						String[] strPortNames = SerialPortList.getPortNames();
+						
+						for(int iIndex = 0; iIndex < strPortNames.length; iIndex++)
+						{
+							cmbCOMPort.add(strPortNames[iIndex]);
+						}
+						
+						/*Enumeration port_list = CommPortIdentifier.getPortIdentifiers(); 
+						//Enumeration generates a series of elements, one at a time.
+						while (port_list.hasMoreElements()) //Tests if enumeration contains more elements
+						{
+							CommPortIdentifier port_id = (CommPortIdentifier)port_list.nextElement();
+							if (port_id.getPortType() == CommPortIdentifier.PORT_SERIAL)
+							{
+								cmbCOMPort.add(port_id.getName());
+								System.out.println ("Serial port: " + port_id.getName());
+							}							
+						}*/
+						
+						lblComPort.setVisible(true);
+						cmbCOMPort.setVisible(true);
+						cmbCOMPort.select(0);
+						
+						lblBaudRate.setVisible(true);
+						cmbBaudRate.setVisible(true);
+						cmbBaudRate.select(0);
+					}
+					break;
+					case "Parallel":
+					{
+						cmbCOMPort.removeAll();
+						cmbCOMPort.add("Select");
+						
+						/*Enumeration port_list = CommPortIdentifier.getPortIdentifiers(); 
+						//Enumeration generates a series of elements, one at a time.
+						while (port_list.hasMoreElements()) //Tests if enumeration contains more elements
+						{
+							CommPortIdentifier port_id = (CommPortIdentifier)port_list.nextElement();
+							if (port_id.getPortType() == CommPortIdentifier.PORT_PARALLEL)
+							{
+								cmbCOMPort.add(port_id.getName());
+								System.out.println ("Parallel port: " + port_id.getName());
+							}							
+						}*/
+						
+						lblComPort.setVisible(true);
+						cmbCOMPort.setVisible(true);
+						cmbCOMPort.select(0);
+						
+						//lblComPort.setVisible(false);
+						//cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+					default:
+					{
+						lblComPort.setVisible(false);
+						cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+				}				
+			}
+		});
+		
+		// Open button functioning
+		btnOpen.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CoinAcceptorResponse(MainWindow.this);
+									
+									txtResponse.setText("");
+									txtResponse.setText("Please Wait..\r\n");
+									objRes = objCRD.Initialize(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+										btnClose.setEnabled(true);
+										
+										btnStartCoinAccept.setEnabled(true);
+										btnStopCoinAccept.setEnabled(true);	
+										btnRejectCoinEscrow.setEnabled(true);
+										btnAccept.setEnabled(true);
+										
+										txtResponse.setText("");
+										txtResponse.append(objRes.strResonseControllerVersion+"\r\n");
+										txtResponse.append(objRes.strCoinInitStatus+"\r\n");
+									}
+									
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		
+		// Close button functioning
+		btnClose.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				switch(cmbInterfaceType.getSelectionIndex())
+				{
+					case 1:		// Parallel
+					{
+						try 
+						{
+							//if (portIdentifier != null && portIdentifier.isCurrentlyOwned())
+							//	parallelPort.close();
+							
+							lblStatusVal.setText("Port closed");
+							btnOpen.setEnabled(true);
+							btnClose.setEnabled(false);
+							
+							btnStartCoinAccept.setEnabled(false);
+							btnStopCoinAccept.setEnabled(false);
+											
+							
+						} catch (Exception e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+					break;
+					case 2:		// Serial
+					{
+						try 
+						{
+							//if (portIdentifier != null && portIdentifier.isCurrentlyOwned())
+							//	serialPort.close();
+							
+							
+							objRes = objCRD.Deinitialize();
+							
+							if(objRes.bResponse)
+							{							
+								lblStatusVal.setText("Port closed");
+								cmbInterfaceType.setEnabled(true);
+								cmbCOMPort.setEnabled(true);
+								cmbBaudRate.setEnabled(true);
+								btnOpen.setEnabled(true);
+								btnClose.setEnabled(false);
+								
+								btnStartCoinAccept.setEnabled(false);
+								btnStopCoinAccept.setEnabled(false);
+							    txtResponse.append("Deinitialize Success");
+							}
+							
+						} catch (Exception e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+					break;
+				}
+			}
+		});
+		
+		// Status button functioning
+		btnStartCoinAccept.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					txtResponse.append("Start Accepting Coin\r\n");
+					objCRD.StartCoinAccept();		
+				}
+				catch(Exception e1)
+				{
+					
+				}
+				
+
+			}
+		});
+		
+		// Get sensor status button functioning
+		btnStopCoinAccept.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					txtResponse.append("Stop Accepting Coin\r\n");
+					objCRD.StopCoinAccept();		
+				}
+				catch(Exception e1)
+				{
+					
+				}
+
+			}
+		});
+		
+		// Clear button functioning
+		btnClear.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					txtResponse.setText("");
+				}
+				catch(Exception e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+	}
+
+	@Override
+	public void CoinAcceptedEvent(int iDenomValue) 
+	{
+		// int i=iDenomValue;
+		// TODO Auto-generated method stub
+		System.out.println("Coin accepted- " + iDenomValue + "\r\n");
+		//txtResponse.append("Coin accepted- " + i + "\r\n");
+	}
+}

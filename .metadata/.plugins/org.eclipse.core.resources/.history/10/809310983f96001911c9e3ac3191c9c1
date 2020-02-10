@@ -1,0 +1,73 @@
+import java.awt.EventQueue;
+
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import java.awt.Font;
+import javax.swing.JButton;
+
+public class MainUtility {
+
+	private JFrame frame;
+
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					MainUtility window = new MainUtility();
+					window.frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	/**
+	 * Create the application.
+	 */
+	public MainUtility() {
+		initialize();
+	}
+
+	/**
+	 * Initialize the contents of the frame.
+	 */
+	private void initialize() {
+		frame = new JFrame();
+		frame.setBounds(100, 100, 344, 300);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(null);
+		
+		JLabel lblNewLabel = new JLabel("KOLKATA METRO TOOL");
+		lblNewLabel.setFont(new Font("Tahoma", Font.BOLD, 12));
+		lblNewLabel.setBounds(89, 11, 148, 35);
+		frame.getContentPane().add(lblNewLabel);
+		
+		JButton btnNewButton = new JButton("Receipt printer");
+		btnNewButton.setBounds(41, 56, 116, 42);
+		frame.getContentPane().add(btnNewButton);
+		
+		JButton button = new JButton("New button");
+		button.setBounds(41, 109, 116, 44);
+		frame.getContentPane().add(button);
+		
+		JButton button_1 = new JButton("New button");
+		button_1.setBounds(41, 164, 116, 43);
+		frame.getContentPane().add(button_1);
+		
+		JButton button_2 = new JButton("New button");
+		button_2.setBounds(178, 55, 116, 43);
+		frame.getContentPane().add(button_2);
+		
+		JButton button_3 = new JButton("New button");
+		button_3.setBounds(178, 109, 116, 43);
+		frame.getContentPane().add(button_3);
+		
+		JButton button_4 = new JButton("New button");
+		button_4.setBounds(178, 164, 116, 43);
+		frame.getContentPane().add(button_4);
+	}
+}

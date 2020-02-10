@@ -1,0 +1,1742 @@
+
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.SWT;
+//import org.eclipse.wb.swt.SWTResourceManager;
+
+import jssc.SerialPort;
+import jssc.SerialPortException;
+import jssc.SerialPortList;
+
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.List;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
+
+/*import gnu.io.CommPort;
+import gnu.io.CommPortIdentifier;
+import gnu.io.NoSuchPortException;
+import gnu.io.ParallelPort;
+import gnu.io.PortInUseException;
+import gnu.io.SerialPort;
+import gnu.io.UnsupportedCommOperationException;*/
+
+import java.awt.HeadlessException;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Enumeration;
+
+import javax.swing.JFileChooser;
+
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.ui.forms.widgets.FormToolkit;
+import org.eclipse.ui.internal.registry.CategorizedPageRegistryReader;
+import org.eclipse.ui.forms.widgets.Form;
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.TabFolder;
+import org.eclipse.swt.widgets.TabItem;
+import org.eclipse.swt.widgets.Group;
+
+public class MainWindow {
+
+	protected Shell shell;
+	private Text txtResponse;
+	
+	private String strOSType;
+	
+	private Label lblComPort;
+	private Combo cmbCOMPort;
+	
+	private Label lblBaudRate;
+	private Combo cmbBaudRate;
+	
+	private Combo cmbType;
+	
+	private Text txtData;
+	private Text txtFile;
+	
+	private static SerialPort serialPort;
+	
+	private static byte ACK = (byte)0x06;
+	private static byte NACK = (byte)0x15;
+	private static byte STX = (byte)0xF2;
+	private static byte ETX = (byte)0x03;
+	private static byte CMT = (byte)0x43;
+	private static byte CRC = (byte)0x00;
+	private final FormToolkit formToolkit = new FormToolkit(Display.getDefault());
+	
+	private CardReaderDispenser objCRD;
+	private Text txtRFCardSN;
+	private Text txtRFSectorPassword;
+	private Text txtRF_CardData;
+		
+	/*private CommPortIdentifier portIdentifier = null;
+	private CommPort commPort = null;
+	private SerialPort serialPort = null;
+	private ParallelPort parallelPort = null;*/
+
+	/**
+	 * Launch the application.
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		try {
+			
+			MainWindow window = new MainWindow();
+			window.open();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shell.open();
+		shell.layout();
+		while (!shell.isDisposed()) {
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
+	}
+	
+	public static byte GetBCC(byte []p,int n)
+	{
+		byte  ch;
+		int	i; 
+		byte crc = (byte)0x00;
+	
+		for(i=0;i<n;i++)
+		{
+			ch = p[i];				
+			crc = (byte)(ch ^ crc);
+		}		
+		return crc;
+	}
+	
+	public static String GetErrorDesc(byte byE1, byte byE0)
+	{
+		String strRes="";
+		
+		switch(String.format("%02x%02x", byE1, byE0))
+		{
+			case "0000": strRes = "Reception of undefined command";	break;
+			case "0001": strRes = "Command parameter error";	break;
+		}
+		
+		return strRes;
+	}
+
+	/**
+	 * Create contents of the window.
+	 */
+	protected void createContents() 
+	{
+		shell = new Shell();
+		shell.setSize(1013, 697);
+		shell.setText("SWT Application");
+		
+		strOSType = System.getProperty("os.name").toLowerCase();
+		shell.setLayout(null);
+		
+		Label lblInterfaceType = new Label(shell, SWT.NONE);
+		lblInterfaceType.setBounds(20, 17, 99, 25);
+		//lblInterfaceType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblInterfaceType.setText("Interface Type");
+		
+		Combo cmbInterfaceType = new Combo(shell, SWT.READ_ONLY);
+		cmbInterfaceType.setBounds(125, 15, 113, 28);
+		cmbInterfaceType.setItems(new String[] {"Select", "Parallel", "Serial", "USB"});
+		cmbInterfaceType.select(0);
+		//cmbInterfaceType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		txtResponse = new Text(shell, SWT.BORDER | SWT.WRAP | SWT.V_SCROLL | SWT.MULTI);
+		txtResponse.setBounds(10, 479, 341, 143);
+		//txtResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Label lblResponse = new Label(shell, SWT.NONE);
+		lblResponse.setBounds(10, 448, 72, 25);
+		lblResponse.setText("Response");
+		//lblResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		lblComPort = new Label(shell, SWT.NONE);
+		lblComPort.setBounds(83, 52, 36, 25);
+		lblComPort.setText("Port");
+		//lblComPort.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//lblComPort.setVisible(false);
+		
+		cmbCOMPort = new Combo(shell, SWT.READ_ONLY);
+		cmbCOMPort.setBounds(125, 50, 113, 28);
+		if(strOSType.indexOf("win") >= 0)
+			cmbCOMPort.setItems(new String[] {"Select", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"});
+		else
+			cmbCOMPort.setItems(new String[] {"Select", "/dev/ttyS0", "/dev/ttyS1", "/dev/ttyS2", "/dev/ttyS3", "/dev/ttyS4", "/dev/ttyS5", "/dev/ttyS6", "/dev/ttyS7", "/dev/ttyS8", "/dev/ttyS9"});
+		cmbCOMPort.select(0);
+		//cmbCOMPort.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//cmbCOMPort.setVisible(false);
+		
+		lblBaudRate = new Label(shell, SWT.NONE);
+		lblBaudRate.setBounds(41, 87, 78, 25);
+		lblBaudRate.setText("Baud Rate");
+		//lblBaudRate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//lblBaudRate.setVisible(false);
+		
+		cmbBaudRate = new Combo(shell, SWT.READ_ONLY);
+		cmbBaudRate.setBounds(125, 85, 113, 28);
+		cmbBaudRate.setItems(new String[] {"Select", "115200", "9600"});
+		cmbBaudRate.select(0);
+		//cmbBaudRate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		//cmbBaudRate.setVisible(false);
+		
+		Button btnOpen = new Button(shell, SWT.NONE);
+		btnOpen.setBounds(10, 122, 110, 30);
+		//btnOpen.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnOpen.setText("Initialize");
+		
+		Button btnClose = new Button(shell, SWT.NONE);
+		btnClose.setBounds(125, 122, 110, 30);
+		//btnClose.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnClose.setText("Deinitialize");
+		btnClose.setEnabled(false);
+		
+		txtData = new Text(shell, SWT.BORDER);
+		txtData.setBounds(60, 280, 291, 28);
+		//txtData.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Label lblData = new Label(shell, SWT.NONE);
+		lblData.setBounds(10, 283, 44, 25);
+		lblData.setText("Data");
+		//lblData.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Button btnSendData = new Button(shell, SWT.NONE);
+		btnSendData.setBounds(264, 314, 87, 30);
+		btnSendData.setText("Send");
+		//btnSendData.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		cmbType = new Combo(shell, SWT.READ_ONLY);
+		cmbType.setBounds(178, 316, 80, 28);
+		cmbType.setItems(new String[] {"ASCII", "HEX"});
+		cmbType.select(0);
+		//cmbType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Label lblFile = new Label(shell, SWT.NONE);
+		lblFile.setBounds(10, 353, 44, 25);
+		lblFile.setText("File");
+		//lblFile.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		txtFile = new Text(shell, SWT.BORDER);
+		txtFile.setBounds(60, 350, 291, 28);
+		//txtFile.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Button btnSendFile = new Button(shell, SWT.NONE);
+		btnSendFile.setBounds(264, 384, 87, 30);
+		btnSendFile.setText("Send");
+		//btnSendFile.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Button btnBrowse = new Button(shell, SWT.NONE);
+		btnBrowse.setBounds(178, 384, 80, 30);
+		btnBrowse.setText("Browse");
+		//btnBrowse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Label lblStatus = new Label(shell, SWT.NONE);
+		lblStatus.setBounds(10, 628, 44, 18);
+		lblStatus.setText("Status-");
+		//lblStatus.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Label lblStatusVal = new Label(shell, SWT.NONE);
+		lblStatusVal.setBounds(60, 628, 576, 28);
+		lblStatusVal.setText("");
+		//lblStatusVal.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Button btnClear = new Button(shell, SWT.NONE);
+		btnClear.setBounds(264, 443, 87, 30);
+		btnClear.setText("Clear");
+		//btnClear.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Button btnDevStatus = new Button(shell, SWT.NONE);
+		btnDevStatus.setBounds(10, 158, 110, 30);
+		btnDevStatus.setText("Device Status");
+		//btnDevStatus.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnDevStatus.setEnabled(false);
+		
+		Button btnSensorStatus = new Button(shell, SWT.NONE);
+		btnSensorStatus.setBounds(125, 158, 110, 30);
+		btnSensorStatus.setText("Sensor Status");
+		//btnSensorStatus.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnSensorStatus.setEnabled(false);
+		
+		Button btnMoveCard = new Button(shell, SWT.NONE);
+		btnMoveCard.setBounds(241, 158, 110, 30);
+		btnMoveCard.setText("Move Card");
+		//btnMoveCard.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnMoveCard.setEnabled(false);
+		
+		Button btnColdReset = new Button(shell, SWT.NONE);
+		btnColdReset.setBounds(241, 122, 110, 30);
+		btnColdReset.setText("Cold Reset");
+		//btnColdReset.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnColdReset.setEnabled(false);
+		
+		Group grpAutotestCardType = new Group(shell, SWT.NONE);
+		grpAutotestCardType.setBounds(10, 200, 341, 62);
+		grpAutotestCardType.setText("Autotest Card Type");
+		formToolkit.adapt(grpAutotestCardType);
+		formToolkit.paintBordersFor(grpAutotestCardType);
+		
+		Button btnRfCard = new Button(grpAutotestCardType, SWT.NONE);		
+		btnRfCard.setBounds(70, 22, 90, 30);
+		btnRfCard.setEnabled(false);
+		btnRfCard.setText("RF Card");
+		//btnRfCard.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		Button btnIcCard = new Button(grpAutotestCardType, SWT.NONE);
+		btnIcCard.setBounds(166, 22, 90, 30);
+		btnIcCard.setEnabled(false);
+		btnIcCard.setText("IC Card");
+		//btnIcCard.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		
+		TabFolder tabF_RFIC = new TabFolder(shell, SWT.NONE);
+		tabF_RFIC.setEnabled(false);
+		tabF_RFIC.setBounds(357, 17, 630, 605);
+		formToolkit.adapt(tabF_RFIC);
+		formToolkit.paintBordersFor(tabF_RFIC);
+		
+		TabItem tbtmRFCard = new TabItem(tabF_RFIC, SWT.NONE);
+		tbtmRFCard.setText("RF Card");
+		
+		Composite composite = new Composite(tabF_RFIC, SWT.NONE);
+		tbtmRFCard.setControl(composite);
+		formToolkit.paintBordersFor(composite);
+		
+		Label lblActivationOrder = new Label(composite, SWT.NONE);
+		//lblActivationOrder.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblActivationOrder.setBounds(20, 23, 109, 20);
+		formToolkit.adapt(lblActivationOrder, true, true);
+		lblActivationOrder.setText("Activation Order");
+		
+		Combo cmbActivationType = new Combo(composite, SWT.READ_ONLY);
+		//cmbActivationType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbActivationType.setItems(new String[] {"Type A, Type B", "Type B, Type A", "Type A (Only)", "Type B (Only)"});
+		cmbActivationType.setBounds(135, 20, 160, 23);
+		formToolkit.adapt(cmbActivationType);
+		formToolkit.paintBordersFor(cmbActivationType);
+		cmbActivationType.select(0);
+		
+		Button btnActivate = new Button(composite, SWT.NONE);
+		//btnActivate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnActivate.setBounds(301, 19, 88, 29);
+		formToolkit.adapt(btnActivate, true, true);
+		btnActivate.setText("Activate");
+		
+		Button btnStatus = new Button(composite, SWT.NONE);		
+		btnStatus.setText("Status");
+		//btnStatus.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnStatus.setBounds(395, 19, 88, 29);
+		formToolkit.adapt(btnStatus, true, true);
+		
+		Button btnDeactivate = new Button(composite, SWT.NONE);		
+		btnDeactivate.setText("Deactivate");
+		//btnDeactivate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnDeactivate.setBounds(489, 19, 88, 29);
+		formToolkit.adapt(btnDeactivate, true, true);
+		
+		Label lblStatus_1 = new Label(composite, SWT.NONE);
+		//lblStatus_1.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStatus_1.setBounds(20, 53, 55, 20);
+		formToolkit.adapt(lblStatus_1, true, true);
+		lblStatus_1.setText("Status");
+		
+		Label lblStatusValue = new Label(composite, SWT.NONE);
+		//lblStatusValue.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStatusValue.setBounds(135, 53, 442, 20);
+		formToolkit.adapt(lblStatusValue, true, true);
+		lblStatusValue.setText("");
+		
+		TabFolder tabF_CardType = new TabFolder(composite, SWT.NONE);
+		tabF_CardType.setBounds(10, 94, 602, 473);
+		formToolkit.adapt(tabF_CardType);
+		formToolkit.paintBordersFor(tabF_CardType);
+		
+		TabItem tbtmS5070 = new TabItem(tabF_CardType, SWT.NONE);
+		tbtmS5070.setText("S50/S70");
+		
+		Composite composite_1 = new Composite(tabF_CardType, SWT.NONE);
+		tbtmS5070.setControl(composite_1);
+		formToolkit.paintBordersFor(composite_1);
+		
+		Label lblCardSn = new Label(composite_1, SWT.NONE);
+		lblCardSn.setText("Card SN");
+		//lblCardSn.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblCardSn.setBounds(10, 14, 64, 20);
+		formToolkit.adapt(lblCardSn, true, true);
+		
+		Label lblNoOfSectors = new Label(composite_1, SWT.NONE);
+		lblNoOfSectors.setText("No of Sectors");
+		//lblNoOfSectors.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblNoOfSectors.setBounds(309, 14, 98, 20);
+		formToolkit.adapt(lblNoOfSectors, true, true);
+		
+		Combo cmbSectorNos = new Combo(composite_1, SWT.READ_ONLY);
+		cmbSectorNos.setItems(new String[] {"00"});
+		//cmbSectorNos.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbSectorNos.setBounds(413, 10, 45, 28);
+		formToolkit.adapt(cmbSectorNos);
+		formToolkit.paintBordersFor(cmbSectorNos);
+		cmbSectorNos.select(0);
+		
+		txtRFCardSN = new Text(composite_1, SWT.BORDER);
+		txtRFCardSN.setEnabled(false);
+		txtRFCardSN.setEditable(false);
+		//txtRFCardSN.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		txtRFCardSN.setBounds(80, 10, 146, 28);
+		formToolkit.adapt(txtRFCardSN, true, true);
+		
+		Group grpPasswordOperationCommands = new Group(composite_1, SWT.NONE);
+		//grpPasswordOperationCommands.setFont(SWTResourceManager.getFont("Segoe UI", 10, SWT.NORMAL));
+		grpPasswordOperationCommands.setText("Password Operation Commands");
+		grpPasswordOperationCommands.setBounds(10, 54, 574, 132);
+		formToolkit.adapt(grpPasswordOperationCommands);
+		formToolkit.paintBordersFor(grpPasswordOperationCommands);
+		
+		Button btnKeyA = new Button(grpPasswordOperationCommands, SWT.RADIO);
+		//btnKeyA.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnKeyA.setBounds(10, 29, 70, 20);
+		formToolkit.adapt(btnKeyA, true, true);
+		btnKeyA.setText("KEY A");
+		
+		Button btnKeyB = new Button(grpPasswordOperationCommands, SWT.RADIO);		
+		//btnKeyB.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnKeyB.setText("KEY B");
+		btnKeyB.setBounds(95, 29, 70, 20);
+		formToolkit.adapt(btnKeyB, true, true);
+		
+		Label lblSectorPassword = new Label(grpPasswordOperationCommands, SWT.NONE);
+		lblSectorPassword.setText("Sector Password");
+		//lblSectorPassword.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblSectorPassword.setBounds(228, 29, 114, 20);
+		formToolkit.adapt(lblSectorPassword, true, true);
+		
+		Button btnCheckPassword = new Button(grpPasswordOperationCommands, SWT.NONE);
+		btnCheckPassword.setText("Check Password");
+		//btnCheckPassword.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnCheckPassword.setBounds(342, 59, 160, 29);
+		formToolkit.adapt(btnCheckPassword, true, true);
+		
+		Button btnChangePassword = new Button(grpPasswordOperationCommands, SWT.NONE);
+		btnChangePassword.setText("Change Password");
+		//btnChangePassword.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnChangePassword.setBounds(342, 94, 160, 29);
+		formToolkit.adapt(btnChangePassword, true, true);
+		
+		Button btnDownloadPasswordTo = new Button(grpPasswordOperationCommands, SWT.NONE);
+		btnDownloadPasswordTo.setText("Download Password to EEPROM");
+		//btnDownloadPasswordTo.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnDownloadPasswordTo.setBounds(10, 59, 235, 29);
+		formToolkit.adapt(btnDownloadPasswordTo, true, true);
+		
+		Button btnLoadPasswordFrom = new Button(grpPasswordOperationCommands, SWT.NONE);
+		btnLoadPasswordFrom.setText("Load Password from EEPROM");
+		//btnLoadPasswordFrom.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnLoadPasswordFrom.setBounds(10, 94, 235, 29);
+		formToolkit.adapt(btnLoadPasswordFrom, true, true);
+		
+		txtRFSectorPassword = new Text(grpPasswordOperationCommands, SWT.BORDER);
+		txtRFSectorPassword.setText("FF FF FF FF FF FF");
+		//txtRFSectorPassword.setFont(SWTResourceManager.getFont("Courier New", 10, SWT.NORMAL));
+		txtRFSectorPassword.setBounds(342, 27, 160, 24);
+		formToolkit.adapt(txtRFSectorPassword, true, true);
+		txtRFSectorPassword.setTextLimit(17);
+		
+		Group grpReadWrite = new Group(composite_1, SWT.NONE);
+		//grpReadWrite.setFont(SWTResourceManager.getFont("Segoe UI", 10, SWT.NORMAL));
+		grpReadWrite.setText("Read / Write RF Card Data");
+		grpReadWrite.setBounds(10, 192, 574, 160);
+		formToolkit.adapt(grpReadWrite);
+		formToolkit.paintBordersFor(grpReadWrite);
+		
+		txtRF_CardData = new Text(grpReadWrite, SWT.BORDER);
+		txtRF_CardData.setText("00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+		//txtRF_CardData.setFont(SWTResourceManager.getFont("Courier New", 11, SWT.NORMAL));
+		txtRF_CardData.setBounds(43, 52, 448, 23);
+		txtRF_CardData.setTextLimit(47);
+		formToolkit.adapt(txtRF_CardData, true, true);
+		
+		Label label = new Label(grpReadWrite, SWT.NONE);
+		label.setText("00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F");
+		//label.setFont(SWTResourceManager.getFont("Courier New", 11, SWT.NORMAL));
+		label.setBounds(48, 26, 433, 20);
+		formToolkit.adapt(label, true, true);
+		
+		Label label_1 = new Label(grpReadWrite, SWT.NONE);
+		label_1.setText("00");
+		//label_1.setFont(SWTResourceManager.getFont("Courier New", 11, SWT.NORMAL));
+		label_1.setBounds(10, 53, 27, 20);
+		formToolkit.adapt(label_1, true, true);
+		
+		Label lblStartBloack = new Label(grpReadWrite, SWT.NONE);
+		lblStartBloack.setText("Start Block");
+		//lblStartBloack.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStartBloack.setBounds(10, 90, 114, 20);
+		formToolkit.adapt(lblStartBloack, true, true);
+		
+		Label lblBloackNumbers = new Label(grpReadWrite, SWT.NONE);
+		lblBloackNumbers.setText("Block Numbers");
+		///lblBloackNumbers.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblBloackNumbers.setBounds(10, 123, 114, 20);
+		formToolkit.adapt(lblBloackNumbers, true, true);
+		
+		Combo cmbRF_StartBlock = new Combo(grpReadWrite, SWT.READ_ONLY);
+		cmbRF_StartBlock.setItems(new String[] {"00"});
+		//cmbRF_StartBlock.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbRF_StartBlock.setBounds(130, 86, 45, 28);
+		formToolkit.adapt(cmbRF_StartBlock);
+		formToolkit.paintBordersFor(cmbRF_StartBlock);
+		cmbRF_StartBlock.select(0);
+		
+		Combo cmbRF_BlockNo = new Combo(grpReadWrite, SWT.READ_ONLY);
+		cmbRF_BlockNo.setItems(new String[] {"00"});
+		//cmbRF_BlockNo.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbRF_BlockNo.setBounds(130, 119, 45, 28);
+		formToolkit.adapt(cmbRF_BlockNo);
+		formToolkit.paintBordersFor(cmbRF_BlockNo);
+		cmbRF_BlockNo.select(0);
+		
+		Button btnReadBlockData = new Button(grpReadWrite, SWT.NONE);
+		btnReadBlockData.setText("Read Block Data");
+		//btnReadBlockData.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnReadBlockData.setBounds(216, 86, 160, 29);
+		formToolkit.adapt(btnReadBlockData, true, true);
+		
+		Button btnWriteBlockData = new Button(grpReadWrite, SWT.NONE);
+		btnWriteBlockData.setText("Write Block Data");
+		//btnWriteBlockData.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnWriteBlockData.setBounds(216, 119, 160, 29);
+		formToolkit.adapt(btnWriteBlockData, true, true);
+		
+		TabItem tbtmICCard = new TabItem(tabF_RFIC, SWT.NONE);
+		tbtmICCard.setText("IC Card");
+		
+		// IC card button
+		btnIcCard.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					CRDCardTypeResponse objRes = objCRD.CheckICCardType();	
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString() + "\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString() + "\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString() + "\r\n");
+						txtResponse.append("Card type- " + objRes.eCardType.toString() + "\r\n");
+						
+						if(objRes.eCardType == CardType.IC_Card)
+						{
+							txtResponse.append("IC Card type- " + objRes.eICCardType.toString() + "\r\n");
+						}
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		// RF card button 
+		btnRfCard.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					CRDCardTypeResponse objRes = objCRD.CheckRFCardType();	
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString() + "\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString() + "\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString() + "\r\n");
+						txtResponse.append("Card type- " + objRes.eCardType.toString() + "\r\n");
+						
+						if(objRes.eCardType == CardType.RF_Card)
+						{
+							tabF_RFIC.setEnabled(true);
+							tabF_RFIC.setSelection(0);
+							
+							tabF_CardType.setSelection(0);							
+							
+							btnKeyA.setSelection(true);
+							txtRFSectorPassword.setText("FF FF FF FF FF FF");
+							txtRF_CardData.setText("00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+							
+							txtResponse.append("RF Card type- " + objRes.eRFCardType.toString() + "\r\n");
+						}
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		
+		shell.setTabList(new Control[]{cmbInterfaceType, cmbCOMPort, cmbBaudRate, btnOpen, btnClose, txtData, cmbType, btnSendData, txtFile, btnBrowse, btnSendFile, btnClear, txtResponse});
+		
+		// Interface selection functioning
+		cmbInterfaceType.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				//txtResponse.setText(cmbInterfaceType.getText());
+				switch(cmbInterfaceType.getText())
+				{
+					case "Serial":
+					{
+						cmbCOMPort.removeAll();
+						cmbCOMPort.add("Select");
+						
+						String[] strPortNames = SerialPortList.getPortNames();
+						
+						for(int iIndex = 0; iIndex < strPortNames.length; iIndex++)
+						{
+							cmbCOMPort.add(strPortNames[iIndex]);
+						}
+						
+						/*Enumeration port_list = CommPortIdentifier.getPortIdentifiers(); 
+						//Enumeration generates a series of elements, one at a time.
+						while (port_list.hasMoreElements()) //Tests if enumeration contains more elements
+						{
+							CommPortIdentifier port_id = (CommPortIdentifier)port_list.nextElement();
+							if (port_id.getPortType() == CommPortIdentifier.PORT_SERIAL)
+							{
+								cmbCOMPort.add(port_id.getName());
+								System.out.println ("Serial port: " + port_id.getName());
+							}							
+						}*/
+						
+						lblComPort.setVisible(true);
+						cmbCOMPort.setVisible(true);
+						cmbCOMPort.select(0);
+						
+						lblBaudRate.setVisible(true);
+						cmbBaudRate.setVisible(true);
+						cmbBaudRate.select(0);
+					}
+					break;
+					case "Parallel":
+					{
+						cmbCOMPort.removeAll();
+						cmbCOMPort.add("Select");
+						
+						/*Enumeration port_list = CommPortIdentifier.getPortIdentifiers(); 
+						//Enumeration generates a series of elements, one at a time.
+						while (port_list.hasMoreElements()) //Tests if enumeration contains more elements
+						{
+							CommPortIdentifier port_id = (CommPortIdentifier)port_list.nextElement();
+							if (port_id.getPortType() == CommPortIdentifier.PORT_PARALLEL)
+							{
+								cmbCOMPort.add(port_id.getName());
+								System.out.println ("Parallel port: " + port_id.getName());
+							}							
+						}*/
+						
+						lblComPort.setVisible(true);
+						cmbCOMPort.setVisible(true);
+						cmbCOMPort.select(0);
+						
+						//lblComPort.setVisible(false);
+						//cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+					default:
+					{
+						lblComPort.setVisible(false);
+						cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+				}				
+			}
+		});
+		
+		// Open button functioning
+		btnOpen.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{				
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									txtResponse.setText("");
+									
+									CRDResponse objRes = objCRD.Initialize(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+										btnClose.setEnabled(true);
+										
+										btnDevStatus.setEnabled(true);
+										btnSensorStatus.setEnabled(true);
+										btnMoveCard.setEnabled(true);
+										
+										btnRfCard.setEnabled(true);
+										btnIcCard.setEnabled(true);
+										
+										btnColdReset.setEnabled(true);
+										
+										txtResponse.append("String- ");
+										for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+										{
+											String strRecvd = new String(objRes.bData, iIndex, 1);
+											txtResponse.append(strRecvd);
+										}
+										txtResponse.append("\r\n");
+										
+										txtResponse.append("Hex- ");
+										for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+										{
+											//String.format("%02X", byResponse[iIndex])
+											//String strRecvd = new String(byResponse, iIndex, 1);
+											txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+										}
+										txtResponse.append("\r\n");
+										
+										txtResponse.append("st0- " + objRes.eST0_Desc.toString());						
+										txtResponse.append("\r\n");							
+										txtResponse.append("st1- " + objRes.eST1_Desc.toString());
+										txtResponse.append("\r\n");							
+										txtResponse.append("st2- " + objRes.eST2_Desc.toString());		
+									}
+									
+									/*portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open(this.getClass().getName(),2000);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof SerialPort )
+										{
+											serialPort = (SerialPort) commPort;
+											serialPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											serialPort.enableReceiveTimeout(1000);
+											if(serialPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);
+												
+												//iStatus = getVersion();
+												//webcam = Webcam.getDefault();						
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+												//iStatus = -1;
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+											//iStatus = -1;
+										}
+									}*/
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} /*catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		
+		// Close button functioning
+		btnClose.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				switch(cmbInterfaceType.getSelectionIndex())
+				{
+					case 1:		// Parallel
+					{
+						try 
+						{
+							//if (portIdentifier != null && portIdentifier.isCurrentlyOwned())
+							//	parallelPort.close();
+							
+							lblStatusVal.setText("Port closed");
+							btnOpen.setEnabled(true);
+							btnClose.setEnabled(false);
+							
+							btnDevStatus.setEnabled(false);
+							btnSensorStatus.setEnabled(false);
+							btnMoveCard.setEnabled(false);							
+							
+						} catch (Exception e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+					break;
+					case 2:		// Serial
+					{
+						try 
+						{
+							//if (portIdentifier != null && portIdentifier.isCurrentlyOwned())
+							//	serialPort.close();
+							txtResponse.setText("");
+							
+							CRDResponse objRes = objCRD.Deinitialize();
+							
+							if(objRes.bResponse)
+							{							
+								lblStatusVal.setText("Port closed");
+								cmbInterfaceType.setEnabled(true);
+								cmbCOMPort.setEnabled(true);
+								cmbBaudRate.setEnabled(true);
+								btnOpen.setEnabled(true);
+								btnClose.setEnabled(false);
+								
+								btnDevStatus.setEnabled(false);
+								btnSensorStatus.setEnabled(false);
+								btnMoveCard.setEnabled(false);
+								
+								btnRfCard.setEnabled(false);
+								btnIcCard.setEnabled(false);
+								
+								btnColdReset.setEnabled(false);
+							}
+							
+						} catch (Exception e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+					break;
+				}
+			}
+		});
+		
+		// Status button functioning
+		btnDevStatus.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					CRDResponse objRes = objCRD.DeviceStatus();					
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString());						
+						txtResponse.append("\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString());
+						txtResponse.append("\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString());		
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}
+						//System.out.println("Data receive- "+strRecvd);
+						
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		// Get sensor status button functioning
+		btnSensorStatus.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					CRDResponse objRes = objCRD.SensorStatus();	
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}						
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}						
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		// Move card button functioning
+		btnMoveCard.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					MoveCardPosition objMCP = new MoveCardPosition();
+					objMCP.open();
+					byte byPos = objMCP.byPos;
+					
+					txtResponse.setText("");
+					
+					CRDResponse objRes = objCRD.MoveCard(byPos);	
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString());						
+						txtResponse.append("\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString());
+						txtResponse.append("\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString());											
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		// cold reset button
+		btnColdReset.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					CRDResponse objRes = objCRD.ICCardColdReset();	
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString() + "\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString() + "\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString() + "\r\n");
+						//txtResponse.append("Card type- " + objRes.eCardType.toString() + "\r\n");
+						txtResponse.append("ATR- " + objRes.strATR + "\r\n");
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		// Activate button functioning
+		btnActivate.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					byte bySet1 = 0x00, bySet2 = 0x00;
+					
+					switch(cmbActivationType.getSelectionIndex())
+					{
+					case 0:		//Type A, Type B
+						bySet1 = CardReaderDispenser.RFCARD_TYPE_A;
+						bySet2 = CardReaderDispenser.RFCARD_TYPE_B;
+						break;
+					case 1:		//Type B, Type A
+						bySet1 = CardReaderDispenser.RFCARD_TYPE_B;
+						bySet2 = CardReaderDispenser.RFCARD_TYPE_A;
+						break;
+					case 2:		//Type A
+						bySet1 = CardReaderDispenser.RFCARD_TYPE_A;
+						bySet2 = CardReaderDispenser.RFCARD_TYPE_NA;
+						break;
+					case 3:		//Type B
+						bySet1 = CardReaderDispenser.RFCARD_TYPE_B;
+						bySet2 = CardReaderDispenser.RFCARD_TYPE_NA;
+						break;
+					}
+					
+					CRD_RFActivateResponse objRes = objCRD.RFCard_Activate(bySet1, bySet2);	
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString() + "\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString() + "\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString() + "\r\n");
+						txtResponse.append("Card Protocol- " + objRes.eCardProtocol.toString() + "\r\n");
+						txtResponse.append("Card Type- " + objRes.eCardType.toString());
+						
+						lblStatusValue.setText("Activated, " + objRes.eCardType.toString());
+						
+						//Show the Serial number on 
+						txtRFCardSN.setText("");						
+						for(int iIndex = 0; iIndex < objRes.bySerialNo.length; iIndex++)
+						{
+							txtRFCardSN.append(String.format("%02X ", objRes.bySerialNo[iIndex]));
+						}
+						
+						//fill the number of sectors acc to card type
+						// for S50 1K card- 00H to 0FH(15)
+						// for S70 4K card- 00H to 27H(39)
+						cmbSectorNos.removeAll();
+						switch(objRes.eCardType)
+						{
+							case MIFARE_S50_1K_CARD: 
+								{
+									for(int iVal = 0; iVal <= 15; iVal++)
+									{
+										cmbSectorNos.add(String.format("%02X", iVal));
+									}
+								}
+								break;
+							case MIFARE_S70_4K_CARD:
+								{
+									for(int iVal = 0; iVal <= 39; iVal++)
+									{
+										cmbSectorNos.add(String.format("%02X", iVal));
+									}
+								}
+								break;
+						}
+						cmbSectorNos.select(0);
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		//RF card status button
+		btnStatus.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					CRD_RFStatusResponse objRes = objCRD.RFCard_Status();	
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString() + "\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString() + "\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString() + "\r\n");	
+						
+						txtResponse.append("Status- " + objRes.eRFStatus.toString() + "\r\n");
+						
+						lblStatusValue.setText("Activated, " + objRes.eRFStatus.toString());
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		//Deactivate RF card
+		btnDeactivate.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					CRDResponse objRes = objCRD.RFCard_Deactivate();	
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString() + "\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString() + "\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString() + "\r\n");
+						
+						lblStatusValue.setText("Deactivated");
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		// RF card check password functioning
+		btnCheckPassword.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					byte byKey = 0x00, bySecNo = 0x00;
+					byte[] byPassword;
+					
+					// Key selection
+					if(btnKeyA.getSelection() == true)
+					{
+						byKey = CardReaderDispenser.RFCARD_KEY_A;
+					}
+					else if(btnKeyA.getSelection() == true)
+					{
+						byKey = CardReaderDispenser.RFCARD_KEY_B;
+					}
+					
+					// sector number selection
+					bySecNo = (byte)Integer.parseInt(cmbSectorNos.getText(), 16);
+					
+					// password in bytes					
+					String[] str = txtRFSectorPassword.getText().trim().split("\\s+");
+					byPassword = new byte[str.length];
+					for(int iIndex = 0; iIndex < str.length; iIndex++)
+					{
+						byPassword[iIndex] = (byte)Integer.parseInt(str[iIndex], 16);
+					}
+					
+					CRD_RFCheckPasswordResponse objRes = objCRD.RFCard_CheckPassword(byKey, bySecNo, byPassword);
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString() + "\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString() + "\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString() + "\r\n");
+						
+						txtResponse.append("RDATA- " + objRes.eReadStatus.toString() + "\r\n");
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		// change password button functioning
+		btnChangePassword.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+			}
+		});
+
+		// read RF card button functioning
+		btnReadBlockData.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					byte bySecNo = 0x00, byBlockNo = 0x00;
+					
+					// sector number selection
+					bySecNo = (byte)Integer.parseInt(cmbSectorNos.getText(), 16);
+					
+					// start block number selection
+					byBlockNo = (byte)Integer.parseInt(cmbRF_StartBlock.getText(), 16);					
+					
+					CRD_RFReadResponse objRes = objCRD.RFCard_Read(bySecNo, byBlockNo);
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString() + "\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString() + "\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString() + "\r\n");
+						
+						txtResponse.append("Read Status- " + objRes.eReadStatus.toString() + "\r\n");
+						
+						if(objRes.eReadStatus == RDATA.SUCCESS)
+						{
+							txtResponse.append("Read block- ");
+							txtRF_CardData.setText("");
+							for(int iIndex = 0; iIndex < objRes.byReadBlock.length; iIndex++)
+							{
+								txtResponse.append(String.format("%02X ", objRes.byReadBlock[iIndex]));
+								txtRF_CardData.append(String.format("%02X ", objRes.byReadBlock[iIndex]));
+							}
+							txtResponse.append("\r\n");
+						}
+						else
+						{
+							txtRF_CardData.setText("");
+						}						
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+
+		// write RF card button functioning
+		btnWriteBlockData.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try 
+				{
+					txtResponse.setText("");
+					
+					byte bySecNo = 0x00, byBlockNo = 0x00;
+					byte[] byDataWrite;
+					
+					// sector number selection
+					bySecNo = (byte)Integer.parseInt(cmbSectorNos.getText(), 16);
+					
+					// start block number selection
+					byBlockNo = (byte)Integer.parseInt(cmbRF_StartBlock.getText(), 16);
+					
+					// write data in bytes					
+					String[] str = txtRF_CardData.getText().trim().split("\\s+");
+					byDataWrite = new byte[str.length];
+					for(int iIndex = 0; iIndex < str.length; iIndex++)
+					{
+						byDataWrite[iIndex] = (byte)Integer.parseInt(str[iIndex], 16);
+					}
+					
+					CRD_RFWriteResponse objRes = objCRD.RFCard_Write(bySecNo, byBlockNo, byDataWrite);
+					
+					if(objRes.bResponse)
+					{
+						txtResponse.append("String- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							String strRecvd = new String(objRes.bData, iIndex, 1);
+							txtResponse.append(strRecvd);
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("Hex- ");
+						for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+						{
+							txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+						}
+						txtResponse.append("\r\n");
+						
+						txtResponse.append("st0- " + objRes.eST0_Desc.toString() + "\r\n");							
+						txtResponse.append("st1- " + objRes.eST1_Desc.toString() + "\r\n");							
+						txtResponse.append("st2- " + objRes.eST2_Desc.toString() + "\r\n");
+						
+						txtResponse.append("Write Status- " + objRes.eWriteStatus.toString() + "\r\n");											
+					}
+					else
+					{
+						txtResponse.append("Error- " + objRes.strErrDesc);
+					}					
+				}
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}
+			}
+		});
+		
+		// Send bytes functioning
+		btnSendData.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				/*try 
+				{
+					InputStream in = serialPort.getInputStream();
+					OutputStream out = serialPort.getOutputStream();
+					
+					byte[] buffer = new byte[100];
+					
+					byte[] byCmd = null;
+					if(cmbType.getSelectionIndex() == 0)
+					{
+						String[] str = txtData.getText().trim().split("\\s+");
+						byCmd = new byte[str.length];
+						for(int iIndex = 0; iIndex < str.length; iIndex++)
+						{
+							byCmd[iIndex] = (byte)Integer.parseInt(str[iIndex], 10);
+						}
+					}
+					else
+					{
+						String[] str = txtData.getText().trim().split("\\s+");
+						byCmd = new byte[str.length];
+						for(int iIndex = 0; iIndex < str.length; iIndex++)
+						{
+							byCmd[iIndex] = (byte)Integer.parseInt(str[iIndex], 16);
+						}
+					}
+					//byte[] by = new byte []{0x1D, 0x49, 0x41};
+					out.write(byCmd);
+					out.flush();
+					//System.out.println("Data sent");
+					Thread.sleep(500); 	
+											
+					int len = -1;							
+					String strRecvd = "";
+					if (( len = in.read(buffer)) > -1 )
+					{
+						//System.out.println("Data receive");
+						strRecvd = new String(buffer, 0, len);
+						txtResponse.append(strRecvd + " ");
+					}
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} 
+				catch(Exception e2)
+				{
+					e2.printStackTrace();
+				}*/
+			}
+		});
+		
+		// Browse button functioning
+		btnBrowse.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{				
+                try 
+                {
+					JFileChooser openFile = new JFileChooser();
+					if(openFile.showOpenDialog(null) == JFileChooser.APPROVE_OPTION)
+					{
+						txtFile.setText(openFile.getSelectedFile().getAbsolutePath());
+					}
+				} catch (HeadlessException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		});
+		
+		// Send file bytes functioning
+		btnSendFile.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				/*try 
+                {
+					InputStream in = serialPort.getInputStream();
+					OutputStream out = serialPort.getOutputStream();
+					
+					byte[] byData = Files.readAllBytes(Paths.get(txtFile.getText()));
+					
+					out.write(byData);
+					out.flush();
+					//System.out.println("Data sent");
+					Thread.sleep(500); 	
+							
+					byte[] buffer = new byte[100];
+					int len = -1;							
+					String strRecvd = "";
+					if (( len = in.read(buffer)) > -1 )
+					{
+						//System.out.println("Data receive");
+						strRecvd = new String(buffer, 0, len);
+						txtResponse.append(strRecvd + " ");
+					}
+					
+				} catch (Exception e1) 
+				{
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}*/
+			}
+		});
+		
+		// Clear button functioning
+		btnClear.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					txtResponse.setText("");
+				}
+				catch(Exception e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+	}
+}

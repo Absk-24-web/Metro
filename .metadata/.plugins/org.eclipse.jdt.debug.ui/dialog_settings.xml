@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<item value="237" key="org.eclipse.jdt.debug.ui.jre_preference_page_context.columnWidth2"/>
+	<item value="1" key="org.eclipse.jdt.debug.ui.jre_preference_page_context.sortColumn"/>
+	<item value="292" key="org.eclipse.jdt.debug.ui.jre_preference_page_context.columnWidth1"/>
+	<item value="/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/lib" key="JavaClasspathTab.LAST_PATH_SETTING"/>
+	<item value="182" key="org.eclipse.jdt.debug.ui.jre_preference_page_context.columnWidth0"/>
+	<section name="org.eclipse.jdt.debug.ui.MAIN_METHOD_SELECTION_DIALOG">
+		<item value="true" key="ShowStatusLine"/>
+		<item value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&#x0D;&#x0A;&lt;History&gt;&#x0D;&#x0A;&lt;historyRootNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=Samlle/&amp;lt;bin(Demo.class[Demo&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=CRDTool/src&amp;lt;lipi{MainWindow.java[MainWindow&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=TokenDispenserTool/src&amp;lt;lipi{MainWindow.java[MainWindow&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=CardReaderDispenserTool/src&amp;lt;{MainWindow.java[MainWindow&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=BnrCashTool/src&amp;lt;{MainWindow.java[MainWindow&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=TestKolkata/\/TestKolkata\/BnrJar\/jxfsserver3.0.jar&amp;lt;com.jxfs.forum.tools.bct(BCT.class[BCT&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=Currency/Lib\/jxfsserver3.0.jar&amp;lt;com.jxfs.forum.tools.bct(BCT.class[BCT&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=AVRMTool/src&amp;lt;lipi{MainWindow.java[MainWindow&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=AVRM/lib\/log4j-1.2.15.jar&amp;lt;org.apache.log4j.chainsaw(Main.class[Main&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=Currency/src&amp;lt;{MainWindow.java[MainWindow&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=JavaBarcode2/src&amp;lt;com.asprise.ocr.sample.util.prefs{Base64.java[Base64&lt;/infoNode&gt;&#x0D;&#x0A;&lt;infoNode&gt;=Printer/src&amp;lt;{MainWindow.java[MainWindow&lt;/infoNode&gt;&#x0D;&#x0A;&lt;/historyRootNode&gt;&#x0D;&#x0A;&lt;/History&gt;" key="History"/>
+		<section name="DialogBoundsSettings">
+			<item value="391" key="DIALOG_WIDTH"/>
+			<item value="1|Segoe UI|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI" key="DIALOG_FONT_NAME"/>
+			<item value="523" key="DIALOG_HEIGHT"/>
+			<item value="391" key="DIALOG_X_ORIGIN"/>
+			<item value="59" key="DIALOG_Y_ORIGIN"/>
+		</section>
+	</section>
+	<section name="org.eclipse.jdt.internal.debug.ui.ExpressionInformationControlCreator$ExpressionInformationControl">
+		<item value="706" key="SashWeightTree"/>
+		<item value="293" key="SashWeightDetails"/>
+		<item value="614" key="WIDTH"/>
+		<item value="194" key="HEIGHT"/>
+	</section>
+	<section name="org.eclipse.jdt.debug.ui.RUNTIME_CLASSPATH_ADVANCED_DIALOG">
+		<item value="245" key="DIALOG_WIDTH"/>
+		<item value="1|Ubuntu|11.0|0|GTK|1|" key="DIALOG_FONT_NAME"/>
+		<item value="332" key="DIALOG_HEIGHT"/>
+		<item value="347" key="DIALOG_X_ORIGIN"/>
+		<item value="151" key="DIALOG_Y_ORIGIN"/>
+	</section>
+</section>

@@ -1,0 +1,1024 @@
+
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Vector;
+
+import com.jxfs.control.IJxfsBaseControl;
+import com.jxfs.control.cdr.IJxfsCDRConst;
+import com.jxfs.control.cdr.JxfsATM;
+import com.jxfs.control.cdr.JxfsCashInOrder;
+import com.jxfs.control.cdr.JxfsCurrency;
+import com.jxfs.control.cdr.JxfsCurrencyCode;
+import com.jxfs.control.cdr.JxfsDenomination;
+import com.jxfs.control.cdr.JxfsDenominationItem;
+import com.jxfs.control.cdr.JxfsDeviceStatus;
+import com.jxfs.control.cdr.JxfsDispenseRequest;
+import com.jxfs.events.IJxfsIntermediateListener;
+import com.jxfs.events.JxfsException;
+import com.jxfs.events.JxfsIntermediateEvent;
+import com.jxfs.events.JxfsOperationCompleteEvent;
+import com.jxfs.general.IJxfsConst;
+import com.jxfs.general.JxfsDeviceManager;
+import com.jxfs.general.JxfsRemoteDeviceInformation;
+import com.mei.bnr.jxfs.device.DeviceType;
+import com.mei.bnr.jxfs.device.IDevice;
+import com.mei.bnr.jxfs.device.IDeviceProvider;
+import com.mei.bnr.jxfs.device.MEIModuleIdentification;
+import com.mei.bnr.jxfs.device.IIdentification.ModuleIdentificationEnum;
+import com.mei.bnr.jxfs.device.state.MEIModuleStatus;
+import com.mei.bnr.jxfs.drivers.BnrUsbDriver;
+import com.mei.bnr.jxfs.service.IDirectIOConsts;
+import com.mei.bnr.jxfs.service.SpecificDeviceManager;
+import com.mei.bnr.jxfs.service.data.MEIBnrStatus;
+import com.mei.bnr.jxfs.service.data.MEICashInOrder;
+import com.mei.bnr.jxfs.service.data.MEICashUnit;
+import com.mei.bnr.jxfs.util.ISynchronousOperation;
+import com.mei.bnr.jxfs.util.MEIJxfsException;
+import com.mei.bnr.jxfs.util.SynchronousJxfsOperationHelper;
+import com.mei.bnr.jxfs.xmlrpc.parameters.DirectIOModuleIdParameter;
+import com.mei.bnr.jxfs.xmlrpc.parameters.DirectIOModuleSetIdentificationParameters;
+
+/**
+ * 
+ * 
+ * IntegrationSample: Sample class to show how to use the Java XFS API.
+ * 
+ * 
+ */
+public class BNRCD 
+{
+
+  public final static long CASH_IN_AMOUNT = 1000;
+  public final static String CASH_IN_CURRENCY = "INR";
+  public final static int EXPONENT = -2;
+  public CRDResponse objCRD=new CRDResponse();
+  public static JxfsATM control;  
+  public static SynchronousJxfsOperationHelper helper;  
+  
+  /**************************************************************************
+   * main
+   *************************************************************************/
+  /**
+   * Main entry point of IntegrationSample. Demonstrate cycle of cashIn
+   * transaction, dispense the change if needed and print some statistics.
+   * 
+   * @param args
+   *          command line arguments to application
+   * 
+   ***************************************************************************/
+  /*public static void main(String[] args) 
+  {    
+    initializeBnrController();      
+    
+    try {
+      control.open();    
+    
+      getSetDateTime();
+    
+      makeBnrOperational();
+    
+      long acceptedAmount = acceptAmount(CASH_IN_AMOUNT);
+      
+      System.out.println("You`ve inserted " + acceptedAmount + " " + CASH_IN_CURRENCY);
+      
+      if (hasChange(acceptedAmount)) {
+        long amountToChange = acceptedAmount - CASH_IN_AMOUNT;
+        dispenseAndPresent(amountToChange);
+      }//if
+      
+      alertStatisticsMessage();
+      
+      observeCashUnit();
+      
+      observeModules();
+    
+      control.close();
+      
+    } catch (JxfsException e) {
+      System.out.println(e.getMessage());
+    } finally {
+      disposeBnrController();
+    }//try
+    
+    System.exit(0);
+  }//main*/
+  
+  /****************************************************************************
+   * initializeBnrController
+   ***************************************************************************/
+  /**
+   * Initialize control and helper to use jxfs actions. 
+   * 
+   ***************************************************************************/
+  public CRDResponse Initialize() 
+  {
+	  objCRD.bResponse=false;
+    try 
+    {
+		IDeviceProvider driver = null;
+		String deviceName = null;    
+		   
+		driver = BnrUsbDriver.getInstance();
+		
+		try 
+		{
+			Thread.sleep(1000);
+		} 
+		catch (InterruptedException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		deviceName = getDeviceNameFromBnrUsbDriver();
+		
+		initControl(driver, deviceName);
+		
+		subscribeEvents();
+		
+		control.open();    
+	    
+	      getSetDateTime();
+	    
+	      makeBnrOperational();
+	      
+	      objCRD.bResponse= true;
+	} 
+    catch (Exception e)
+    {
+		objCRD.bResponse=false;
+		objCRD.strErrDesc=e.toString();
+		
+	}    
+    return objCRD;
+  }
+  
+  public boolean Reset() 
+  {
+	 
+	  boolean bRet=false;
+    try 
+    {
+    	resetBnr(); 
+		bRet = true;
+	} 
+    catch (Exception e)
+    {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+		bRet=false;
+	}    
+    return bRet;
+  }
+  /****************************************************************************
+   * getDeviceNameFromBnrUsbDriver
+   ***************************************************************************/
+  /**
+   * method to obtain a device from the BnrUsbDriver.
+   * 
+   * @return device name
+   * 
+   ***************************************************************************/
+  private String getDeviceNameFromBnrUsbDriver()
+  {
+    String deviceName = null;
+    IDevice device = null;
+    
+    BnrUsbDriver bnrUsbDriver = BnrUsbDriver.getInstance();
+    
+    if (isContainsDeviceNames(bnrUsbDriver)) 
+    {
+      deviceName = getDeviceName(bnrUsbDriver);
+      device = bnrUsbDriver.getByName(deviceName);
+    }
+
+    if (isBnrNotConnected(device))
+    {
+      System.err.println("No device found or device not a BNR");
+      throw new IllegalStateException();
+    }//if
+
+    return deviceName;
+  }//getDeviceNameFromBnrUsbDriver
+  
+  /****************************************************************************
+   * isContainsDeviceNames
+   ***************************************************************************/
+  /**
+   * Checks that usb driver contains names of devices
+   * 
+   * @param bnrUsbDriver driver
+   * @return true or false, depending of name availability
+   * 
+   ***************************************************************************/ 
+  private boolean isContainsDeviceNames(BnrUsbDriver bnrUsbDriver) {
+    return bnrUsbDriver.getDeviceNames().size() > 0 ? true : false;
+  }//isContainsDeviceNames
+
+  /****************************************************************************
+   * getDeviceName
+   ***************************************************************************/
+  /**
+   * get device name from bnrUsbDriver
+   * 
+   * @param bnrUsbDriver driver
+   * @return name of device
+   * 
+   ***************************************************************************/ 
+  private String getDeviceName(BnrUsbDriver bnrUsbDriver) {
+    return bnrUsbDriver.getDeviceNames().iterator().next();
+  }//bnrUsbDriver
+  
+  /****************************************************************************
+   * isBnrNotConnected
+   ***************************************************************************/
+  /**
+   * Checks that Bnr device not connected
+   * 
+   * @param device that gets from usbDriver
+   * @return TRUE if Bnr NOT connected and FALSE otherwise
+   * 
+   ***************************************************************************/ 
+  private boolean isBnrNotConnected(IDevice device) {
+    boolean deviceNotExist = (device == null) ? true : false;
+    boolean deviceNotBnr   = (device.getDeviceType() != DeviceType.BNR) ? true : false;
+      
+    return deviceNotExist || deviceNotBnr;
+  }//isBnrNotConnected
+  
+  /****************************************************************************
+   * initControl
+   ***************************************************************************/
+  /**
+   * Initializes control and helper for access to bnr
+   * 
+   * @param driver for bnr
+   * @param deviceName of bnr
+   * 
+   ***************************************************************************/
+  private void initControl(IDeviceProvider driver, String deviceName) 
+  {
+    try
+    {      
+      control = initializeAndGetJxfsControl(driver, deviceName);
+      helper = new SynchronousJxfsOperationHelper(control);     
+        
+    } 
+    catch (JxfsException e)
+    {
+      System.err.println("JxfsException occured in JxfsDeviceManager.initialize().");
+      System.err.println(e.toString());
+    } 
+    catch (Exception e)
+    {
+      System.err.println("Exception occured in JxfsDeviceManager.initialize().");
+      System.err.println(e.toString());
+    }//try  
+  }//initControl
+ 
+  /****************************************************************************
+   * initializeAndGetJxfsControl
+   ***************************************************************************/
+  /**
+   * Initialize JxfsDeviceManager and obtain a JxfsATM Control for the
+   * device identified by the given name and driver.
+   * 
+   * @param driver for bnr
+   * @param deviceName of bnr
+   * @return a JxfsATM control.
+   * @throws JxfsException
+   *           if an error occurred.
+   * 
+   ***************************************************************************/
+  private JxfsATM initializeAndGetJxfsControl(IDeviceProvider driver, String deviceName) throws JxfsException {
+
+    try 
+    {
+		JxfsDeviceManager.getReference().initialize("com.mei.bnr.jxfs.service.SpecificDeviceManager,workstation,jxfsClient,lib");
+	} 
+    catch (Exception e)
+    {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} 
+    
+    SpecificDeviceManager.getReference().announce(
+        new JxfsRemoteDeviceInformation("workstation", driver.getClass().getName()
+            + "/" + deviceName, "", "com.jxfs.control.cdr.JxfsATM", "com.mei.bnr.jxfs.service.BnrService", "CDR-" 
+            + deviceName, "description"));
+
+    final IJxfsBaseControl control = getBaseControl(driver, deviceName);
+
+    if (!isJxfsControl(control)) {
+      System.err.println("Not a JxfsATM control.");
+      throw new IllegalStateException();
+    }//if
+    return (JxfsATM) control;
+  }//initializeAndGetJxfsControl
+ 
+  /****************************************************************************
+   * getBaseControl
+   *************************************************************************/
+  /**
+   * Returns Jxfs base conrol
+   * 
+   * @param driver for bnr
+   * @param deviceName of bnr
+   * @return a Jxfs base control.
+   * @throws JxfsException
+   *           if an error occurred.
+   * 
+   ***************************************************************************/
+  private IJxfsBaseControl getBaseControl(IDeviceProvider driver, String deviceName) throws JxfsException {
+    return JxfsDeviceManager.getReference().getDevice(driver.getClass().getName() + "/" + deviceName + "@workstation");
+  }//getBaseControl
+
+  /****************************************************************************
+   * isJxfsControl
+   ***************************************************************************/
+  /**
+   * Checks that base control is JxfsATM control
+   * 
+   * @param control base control
+   * @return true or false if JxfsConrol instance of base control
+   * 
+   ***************************************************************************/
+  private boolean isJxfsControl(IJxfsBaseControl control) {
+    return control instanceof JxfsATM ? true : false;
+  }//isJxfsControl
+ 
+  /****************************************************************************
+   * subscribeEvents
+   ***************************************************************************/
+  /**
+   * Subscribe to intermediate event, and check how much bills user
+   * inserted during cahIn operation.
+   * 
+   * 1) integrator can implement custom Observers for Bnr events and subscribe
+   *    it during app initialization. After closing Bnr, integrator should
+   *    unsubscribe from Bnr events manually (not implemented in this demo).
+   *    
+   * 2) integrator can implement custom observers on-the-fly using helper and
+   *    anonymous classes (implemented in this demo)
+   *
+   * 
+   ***************************************************************************/
+  private void subscribeEvents() {
+    control.addIntermediateListener(new IJxfsIntermediateListener() {
+
+      public void intermediateOccurred(JxfsIntermediateEvent IE) {
+        MEICashInOrder data = (MEICashInOrder) IE.getData();
+        System.out.println("You`ve inserted: " + data.getDenomination().getAmount() + " " + CASH_IN_CURRENCY);      
+      }//intermediateOccurred
+    });    
+  }//subscribeEvents
+ 
+  /****************************************************************************
+   * getSetDateTime
+   ***************************************************************************/
+  /**
+   * An example method, how to set up date to bnr. We get current OS time,
+   * set it into bnr and print to the terminal.
+   *   
+   * @throws JxfsException 
+   *                 if an error occurred.
+   * 
+   ***************************************************************************/
+  private void getSetDateTime() throws JxfsException {
+    System.out.println("Set Date to the BNR");
+    Date result = null;
+    
+    setCurrentDateTime();
+    result = getBnrDateTime();   
+    
+    System.out.println("Date from the BNR: " + result);
+  }//getSetDateTime
+
+  /****************************************************************************
+   * setCurrentDateTime
+   ***************************************************************************/
+  /**
+   * Takes date from OS and, using helper, set it into the bnr
+   *   
+   * @throws JxfsException 
+   *                 if an error occurred.
+   * 
+   ***************************************************************************/
+  public void setCurrentDateTime() throws JxfsException {
+    final Date date = GregorianCalendar.getInstance().getTime();
+    
+    // Set Date Time.
+    helper.run(new ISynchronousOperation() {
+        public int run(JxfsATM control) throws JxfsException {
+          return control.setDateTime(date);
+        }//run
+      }); 
+  }//setCurrentDateTime
+ 
+  /****************************************************************************
+   * getBnrDateTime
+   ***************************************************************************/
+  /**
+   * Gets date from bnr
+   *   
+   * @return date from bnr
+   * @throws JxfsException 
+   *                 if an error occurred.
+   * 
+   ***************************************************************************/
+  public Date getBnrDateTime() throws JxfsException
+  {
+    Date result = null;
+    JxfsOperationCompleteEvent event = null;
+      
+     // Run getTime operation
+    event = helper.run(new ISynchronousOperation()
+    {
+        public int run(JxfsATM control) throws JxfsException 
+        {
+          return control.getDateTime();
+        }//run
+      });
+    
+    // Check and return result
+    if (event.getResult() == IJxfsConst.JXFS_RC_SUCCESSFUL)
+    {
+      result = (Date) event.getData();
+    } 
+    else 
+    {
+      throw new JxfsException(event.getResult());
+    }//if
+    return result;
+  }//getBnrDateTime
+ 
+  /****************************************************************************
+   * makeBnrOperational
+   ***************************************************************************/
+  /**
+   * If bnr status is offline, set it online
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void makeBnrOperational() throws JxfsException
+  {
+    JxfsDeviceStatus deviceStatus = getDeviceStatus();    
+
+    if (deviceStatus.isOffLine())
+    {
+      resetBnr();      
+    }//if    
+  }//makeBnrOperational
+
+  /****************************************************************************
+   * getDeviceStatus
+   ***************************************************************************/
+  /**
+   * If bnr status is offline, set it online
+   * 
+   * @return device status
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  public JxfsDeviceStatus getDeviceStatus() throws JxfsException {
+    MEIBnrStatus status = null;    
+    
+    // Run get status operation
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.directIO(IDirectIOConsts.JXFS_O_MEI_CDR_GET_STATUS, null);
+      }//run
+    });
+    
+    // Check and return result
+    if (event.getResult() == IJxfsConst.JXFS_RC_SUCCESSFUL) {      
+      status = (MEIBnrStatus) event.getData();
+    } else {
+      throw new JxfsException(event.getResult());
+    }//if
+    return status.getDeviceStatus();
+  }//getDeviceStatus
+ 
+  /****************************************************************************
+   * startCashInTransaction
+   ***************************************************************************/
+  /**
+   * Reset Bnr
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void resetBnr() throws JxfsException {
+    
+    helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.reset();
+      }//run
+    });
+  }//resetBnr
+  
+  /****************************************************************************
+   * acceptAmount
+   ***************************************************************************/
+  /**
+   * Typical cashIn transaction: 
+   * 1. Start cashIn transaction
+   * 2. Ask user insert amount of money
+   * 3. Check if change is needed
+   * 4. Check if bnr can change money
+   * 5. If Bnr can`t change it - rollback to user and ask lesser bills
+   * 6. End transaction
+   * 
+   * @param amount of money
+   * @return inserted amount of money
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  public long acceptAmount() 
+  {
+	MEICashInOrder data = null;
+	long insertedAmount = 0;  
+	boolean hasChange = false;
+    
+    try 
+    {
+		startCashInTransaction();
+		
+		//while ((insertedAmount != amount) && !hasChange) {
+		  //System.out.println("Please insert " + CASH_IN_AMOUNT + " " + CASH_IN_CURRENCY + ".");    
+		  data = cashIn(CASH_IN_AMOUNT, CASH_IN_CURRENCY);
+		  insertedAmount = data.getDenomination().getAmount();      
+		  
+		  // Check if change needed
+		  /*if (insertedAmount > amount) {
+		    long requiredChange = insertedAmount - amount;
+		    hasChange = isDenominational(requiredChange);
+		    
+		    // Return money, if bnr can't change it
+		    if (!hasChange) {
+		      System.out.println("Unfortunately device can`t change this amount of bills");
+		      cashInRollback(); 
+		    }//if
+		  }//if*/
+		//}//while
+		  
+		//endCashInTransaction();
+	} catch (Exception e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}    
+    return insertedAmount;
+  }//acceptAmount
+  
+  /****************************************************************************
+   * startCashInTransaction
+   ***************************************************************************/
+  /**
+   * Start the cash in transaction with the BNR
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void startCashInTransaction() throws JxfsException
+  {
+    helper.run(new ISynchronousOperation()
+    {
+        public int run(JxfsATM control) throws JxfsException 
+        {
+          return control.cashInStart(IJxfsCDRConst.JXFS_C_CDR_POS_DEFAULT, true);
+        }//run
+      });
+  }//startCashInTransaction
+  
+  /****************************************************************************
+   * cashIn
+   ***************************************************************************/
+  /**
+   * Move inserted notes to the escrow
+   * `2
+   * @param amount required
+   * @param currencyCode required
+   * @return information about inserted notes
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private MEICashInOrder cashIn(long amount, String currencyCode) throws JxfsException {
+    MEICashInOrder result = null;
+    JxfsOperationCompleteEvent event = null;
+    final JxfsDenomination denomination = new JxfsDenomination(null, amount, 0);
+    final JxfsCurrency jxfsCurrency = new JxfsCurrency(new JxfsCurrencyCode(
+          currencyCode == null ? "" : currencyCode), 0);
+      
+    // Run cashIn operation
+    event = helper.run(new ISynchronousOperation() {
+        public int run(JxfsATM deviceControl) throws JxfsException {
+          return ((JxfsATM) deviceControl).cashIn(new JxfsCashInOrder(denomination, jxfsCurrency));
+        }//run
+      });    
+    // If the result is not successful
+    if (event.getResult() != IJxfsConst.JXFS_RC_SUCCESSFUL) 
+    {
+      throw new MEIJxfsException(event.getResult(), event.getData());
+    } 
+    else 
+    {
+      result = (MEICashInOrder) event.getData();
+    }//if
+    return result;
+  }//cashIn
+  
+  /****************************************************************************
+   * isDenominational
+   ****************************************************************************/
+  /**
+   * Check if device has enough money to change
+   * 
+   * @param amountToDenominate required
+   * @return true or false, dependable on denomination operation
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ****************************************************************************/
+  private boolean isDenominational(final long amountToDenominate) throws JxfsException {
+    final int mixNumber = IJxfsCDRConst.JXFS_C_CDR_MIX_ALGORITHM;
+    final Vector<JxfsDenominationItem> denominationItems = null;
+    
+    // Run denomination operation
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.denominate(mixNumber, new JxfsDenomination(
+            denominationItems, amountToDenominate, 0), new JxfsCurrency(
+              new JxfsCurrencyCode(CASH_IN_CURRENCY), EXPONENT));
+      }//run
+    });
+    
+    // Check result
+    if (event.getResult() == IJxfsCDRConst.JXFS_E_CDR_NOT_DISPENSABLE) {
+      return false;
+    }//if
+    return true;
+  }//isDenominational 
+  
+  /****************************************************************************
+   * cashInRollback
+   ***************************************************************************/
+  /**
+   * Roll back the cash in transaction
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  public void cashInRollback() 
+  {
+    try 
+    {
+		// Retrieve the operationCompleteEvent
+		helper.run(new ISynchronousOperation() 
+		{
+		  public int run(JxfsATM control) throws JxfsException 
+		  {
+		    return control.cashInRollback();
+		  }//run
+		});
+	}
+    catch (Exception e) 
+    {
+		e.printStackTrace();
+	}
+  }//cashInRollback
+  
+  /****************************************************************************
+   * endCashInTransaction
+   ***************************************************************************/
+  /**
+   * End the cash in transaction with the BNR
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  public void endCashInTransaction() 
+  {
+    try 
+    {
+		helper.run(new ISynchronousOperation()
+		{
+		  public int run(JxfsATM control) throws JxfsException
+		  {
+		    return control.cashInEnd();
+		  }//run
+		});
+	} 
+    catch (Exception e) 
+    {
+		e.printStackTrace();
+	}
+  }//endCashInTransaction
+ 
+  /****************************************************************************
+   * hasChange
+   ***************************************************************************/
+  /**
+   * Check if bnr should give change or not
+   * 
+   * @param insertedAmount amount
+   * @return true or not, if inserted amount bigger then required
+   ***************************************************************************/
+  private boolean hasChange(long insertedAmount) {
+    return (insertedAmount - CASH_IN_AMOUNT) > 0 ? true : false;
+  }//hasChange
+ 
+  /****************************************************************************
+   * dispenseAndPresent
+   ***************************************************************************/
+  /**
+   * Dispense and give change to user
+   * 
+   * @param amountToChange required
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void dispenseAndPresent(long amountToChange) throws JxfsException {
+    System.out.println("Take your change");
+    dispense(amountToChange);
+    present();
+  }//dispenseAndPresent
+  
+  /****************************************************************************
+   * dispense
+   ***************************************************************************/
+  /**
+   * Dispenses the amount
+   * 
+   * @param amountToChange required
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void dispense(final long amountToChange) throws JxfsException {
+    final int mixNumber = IJxfsCDRConst.JXFS_C_CDR_MIX_ALGORITHM;
+    
+    // Run dispense operation
+    helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.dispense(new JxfsDispenseRequest(mixNumber,
+            new JxfsDenomination(null, amountToChange, 0),
+            new JxfsCurrency(new JxfsCurrencyCode(CASH_IN_CURRENCY), EXPONENT),
+            IJxfsCDRConst.JXFS_C_CDR_POS_DEFAULT));
+      }//run
+    });
+  }//dispense
+  
+  /****************************************************************************
+   * present
+   ***************************************************************************/
+  /**
+   * Present dispensed money
+   * 
+   * @param amountToChange
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void present() throws JxfsException {
+    
+    // Run present operation
+    helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.present();
+      }//run
+    });
+  }//present
+  
+  /*************************************************************************
+   * alertStatisticsMessage
+   ***************************************************************/
+  /**
+   * Print statistics message
+   * 
+   *************************************************************************/
+  private void alertStatisticsMessage() {
+    
+    System.out.println("\n********************************************************************");
+    System.out.println("STATISTICS");
+    System.out.println("********************************************************************\n");
+  }//alertStatisticsMessage
+  
+  /****************************************************************************
+   * observeCashUnit
+   ***************************************************************************/
+  /**
+   * Print cashUnit statistics
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void observeCashUnit() throws JxfsException {
+    
+    System.out.println("\n******************* Cash Units *******************");
+    System.out.println(queryCashUnit());
+    
+  }//observeCashUnit
+  
+  /****************************************************************************
+   * queryCashUnit
+   ***************************************************************************/
+  /**
+   * Get the complete state of all physical and logical cash units in the BNR
+   * 
+   * @return data about cashUnits
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private MEICashUnit queryCashUnit() throws JxfsException {
+    MEICashUnit resultedCashUnit = null;
+    
+    // Retrieve the operationCompleteEvent
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.queryCashUnit();
+      }//run
+
+    });
+    
+    // If the result is successful
+    if (event.getResult() == IJxfsCDRConst.JXFS_RC_SUCCESSFUL) {
+      // Retrieve the MEICashUnit object
+      resultedCashUnit = (MEICashUnit) event.getData();
+    } else {
+      throw new JxfsException(event.getResult());
+    }//if
+    return resultedCashUnit;
+  }//queryCashUnit
+  
+  /****************************************************************************
+   * observeModules
+   ***************************************************************************/
+  /**
+   * Print Modules statistics
+   * @throws JxfsException 
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void observeModules() throws JxfsException {
+    System.out
+    .println("\n******************* Modules *******************");
+    
+    ArrayList<Integer> modules = getModules();
+    
+    for (Integer module : modules) {
+      System.out.println("Module " + ModuleIdentificationEnum.getById(module));
+      
+      MEIModuleIdentification properties = getIdentification(module);
+      
+      // Set Module Name if not Bundler or Cashbox
+      //if (!(properties.getDescription().contains("Bundler")) && !(properties.getDescription().contains("Cashbox"))) {
+        //setIdentification(module, "userInfo");
+      //}//if
+      
+      // Save User info to Module
+      System.out.println(getStatus(module));
+    }//for
+    
+  }//observeModules
+  
+  /****************************************************************************
+   * getModules
+   ***************************************************************************/
+  /**
+   * Get the list of all available modules.
+   * 
+   * @return the list of module ids or <code>null</code> if an error occurred.
+   * @throws JxfsException
+   *           if the command failed
+   * 
+   ***************************************************************************/
+  @SuppressWarnings("unchecked")
+  private ArrayList<Integer> getModules() throws JxfsException {
+    ArrayList<Integer> modules = null;
+    
+    JxfsOperationCompleteEvent eventGetModules = helper
+        .run(new ISynchronousOperation() {
+          public int run(JxfsATM control) throws JxfsException {
+            return control.directIO(
+              IDirectIOConsts.JXFS_O_MEI_CDR_GET_MODULES, null);
+          }//run
+        });
+    
+    if (eventGetModules.getResult() == IJxfsCDRConst.JXFS_RC_SUCCESSFUL) {
+      modules = (ArrayList<Integer>) eventGetModules.getData();
+    } else {
+      throw new JxfsException(eventGetModules.getResult());
+    }//if
+    return modules;
+  }//getModules
+  
+  /****************************************************************************
+   * getIdentification
+   ***************************************************************************/
+  /**
+   * Get module identification for the given module id.
+   * 
+   * @param moduleId
+   *          the given module id.
+   * @return a MEIModuleIdentification.
+   * @throws JxfsException
+   *           if the command failed
+   *
+   ***************************************************************************/
+  private MEIModuleIdentification getIdentification(final int moduleId) throws JxfsException {
+    MEIModuleIdentification moduleIdentification = null;
+    
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.directIO(
+            IDirectIOConsts.JXFS_O_MEI_CDR_MODULE_GET_IDENTIFICATION,
+            new DirectIOModuleIdParameter(moduleId));
+      }//run
+    });
+
+    if (event.getResult() == IJxfsConst.JXFS_RC_SUCCESSFUL) {
+      moduleIdentification = (MEIModuleIdentification) event.getData();
+    } else {
+      throw new JxfsException(event.getResult());
+    }//if
+
+    return moduleIdentification;
+  }//getIdentification
+  
+  /****************************************************************************
+   * setIdentification
+   ***************************************************************************/
+  /**
+   * Set the user identification of a module.
+   * 
+   * @param moduleId
+   *          the module id
+   * @param stringIdentification
+   *          the string to be written in the BNR. The maximum length is 255
+   *          characters.
+   * @throws JxfsException
+   *           if the command failed
+   * 
+   ***************************************************************************/
+  private void setIdentification(final int moduleId,
+      final String stringIdentification) throws JxfsException {
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.directIO(
+            IDirectIOConsts.JXFS_O_MEI_CDR_MODULE_SET_IDENTIFICATION,
+            new DirectIOModuleSetIdentificationParameters(moduleId,
+                stringIdentification));
+      }//run
+    });
+
+    // If the result is not successful
+    if (event.getResult() != IJxfsConst.JXFS_RC_SUCCESSFUL) {
+      throw new JxfsException(event.getResult());
+    }//if
+  }//setIdentification
+  
+  /****************************************************************************
+   * getStatus
+   ***************************************************************************/
+  /**
+   * Get the module state for the given module id.
+   * 
+   * @param moduleId
+   *          the given module id.
+   * @return a MEIModuleStatus.
+   * @throws JxfsException
+   *           if the command failed
+   ***************************************************************************/
+  private MEIModuleStatus getStatus(final int moduleId) throws JxfsException {
+    MEIModuleStatus moduleStatus = null;
+
+    // Retrieve the operationCompleteEvent
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.directIO(
+            IDirectIOConsts.JXFS_O_MEI_CDR_MODULE_GET_STATE,
+            new DirectIOModuleIdParameter(moduleId));
+      }//run
+    });
+
+    // If the result is successful
+    if (event.getResult() == IJxfsConst.JXFS_RC_SUCCESSFUL) {
+      // Retrieve the MEIModuleStatus object
+      moduleStatus = (MEIModuleStatus) event.getData();
+    } else {
+      throw new JxfsException(event.getResult());
+    }//if
+    return moduleStatus;
+  }//getStatus
+ 
+  /****************************************************************************
+   * disposeBnrController
+   ***************************************************************************/
+  /**
+   * Close bnrController end exit from application
+   * 
+   ***************************************************************************/
+  private void disposeBnrController() {
+    JxfsDeviceManager.getReference().shutdown();
+  }//disposeBnrController
+}//IntegrationSample

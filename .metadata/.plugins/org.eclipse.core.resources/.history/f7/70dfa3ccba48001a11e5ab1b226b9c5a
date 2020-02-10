@@ -1,0 +1,1115 @@
+package Cris;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Spliterator;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import jssc.SerialPort;
+
+
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import jssc.SerialPortException;
+
+public class Printer
+{	
+	
+	private static SerialPort serialPort = null;
+	private static SerialPort  printPort =null;
+	public static Thread thCoinAccept = null;
+	public static Boolean StartPrint=false;
+	public static Boolean StopPrint=false;
+	public static Boolean isPortOpened=false;
+	public static Logger PrinterLogger = null;
+	private static volatile FileHandler fileHandler;
+	private static volatile int iPrevDayOfYear = 0;
+	public static Boolean isPrinterDeviceConnected=false;
+	 private final static byte[] SET_LINE_SPACE_24 = new byte[]{0x1B, 0x33, 24};
+	 private final static byte[] SELECT_BIT_IMAGE_MODE = {0x1B, 0x2A, 33};
+	 private final static byte[] SET_LINE_SPACE_30 = new byte[]{0x1B, 0x33, 30};
+	 public static byte[] FEED_LINE = {10};
+	
+	public Printer()
+	{
+        PrinterLogger = Logger.getLogger(Printer.class.getName());
+		
+		//logger.setLevel(Level.FINE);
+        PrinterLogger.setLevel(Common.GetLogLevel());
+		
+		//to show logs on console
+        PrinterLogger.addHandler(new ConsoleHandler());
+	}
+	
+	
+	
+	private void WriteLog(Level objLevel, String strLog)
+	{
+		try
+        {
+			FileHandler fh = fileHandler;
+			if (fh != null) 
+			{
+				PrinterLogger.removeHandler(fh);
+		        fh.close(); //Release any file lock.
+		    }
+			
+			//adding custom handler
+	        //logger.addHandler(new MyHandler());
+	        
+			Calendar cal = Calendar.getInstance();
+			int iYear = cal.get(Calendar.YEAR);
+			int iDayOfYear = cal.get(Calendar.DAY_OF_YEAR);
+			
+			String strFileName = GlobalMembers.LogDirPath() + File.separator + "AVRMAPI_" + GlobalMembers.strHostName + "Log" + iYear + "." + iDayOfYear;
+					
+        	File yourFile = new File(strFileName);
+        	yourFile.getParentFile().mkdirs();
+        	yourFile.createNewFile();
+        	
+        	//FileHandler file name with max size and number of log files limit
+            fileHandler = new FileHandler(strFileName, true);
+            
+            fileHandler.setFormatter(new MyFormatter());
+            
+            //setting custom filter for FileHandler
+            fileHandler.setFilter(new MyFilter());
+            
+            //adding custom handler
+            PrinterLogger.addHandler(fileHandler);
+            
+            //smartCardlogger.log(objLevel, "prev- " + iPrevDayOfYear);
+            //smartCardlogger.log(objLevel, "cur- " + iDayOfYear);
+            
+            if(iPrevDayOfYear == 0 || iPrevDayOfYear != iDayOfYear)
+            {
+            	SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd MMM yyyy");
+            	
+            	PrinterLogger.log(objLevel, "Date: " + simpleDateFormat.format(new Date()));
+            	iPrevDayOfYear = iDayOfYear;
+            }
+            
+            PrinterLogger.log(objLevel, strLog);
+        }
+        catch (SecurityException | IOException e1) 
+		{
+            e1.printStackTrace();
+        }
+	}
+	
+	private static int[][] getPixelsSlow(BufferedImage image)
+	{
+	    int width = image.getWidth();
+	    int height = image.getHeight();
+	    int[][] result = new int[height][width];
+	    for (int row = 0; row < height; row++)
+	    {
+	        for (int col = 0; col < width; col++)
+	        {
+	            result[row][col] = image.getRGB(col, row);
+	        }
+	    }
+	    return result;
+	}
+
+   private static void printImage(int[][] pixels) 
+   {
+	 try 
+	 {
+		 System.out.println("Inside printImage");
+		 printPort.writeBytes(SET_LINE_SPACE_24);
+		 for (int y = 0; y < pixels.length; y += 24)
+		 {
+		   printPort.writeBytes(SELECT_BIT_IMAGE_MODE);
+		   printPort.writeBytes(new byte[]{(byte)(0x00ff & pixels[y].length)
+		                             , (byte)((0xff00 & pixels[y].length) >> 8)});
+		   for (int x = 0; x < pixels[y].length; x++)
+		   {
+		     printPort.writeBytes(recollectSlice(y, x, pixels));
+		   }
+
+		   printPort.writeBytes(FEED_LINE);
+		 }
+		   printPort.writeBytes(SET_LINE_SPACE_30);
+		   
+		   Thread.sleep(500);
+		   byte[] status = new byte[]{ 0x1B, 0x69 };
+           printPort.writeBytes(status);
+           System.out.println("--> printImage");
+	 } 
+	 catch (SerialPortException | InterruptedException e)
+	 {
+		e.printStackTrace();
+	 }
+	}
+
+	private static byte[] recollectSlice(int y, int x, int[][] img)
+	{
+	    byte[] slices = new byte[] {0, 0, 0};
+	    for (int yy = y, i = 0; yy < y + 24 && i < 3; yy += 8, i++) 
+	    {
+	        byte slice = 0;
+	        for (int b = 0; b < 8; b++) 
+	        {
+	            int yyy = yy + b;
+	            if (yyy >= img.length)
+	            {
+	              continue;
+	            }
+		        int col = img[yyy][x]; 
+		        boolean v = shouldPrintColor(col);
+		        slice |= (byte) ((v ? 1 : 0) << (7 - b));
+	        }
+	        slices[i] = slice;
+	    }
+	    return slices;
+	}
+
+	private static boolean shouldPrintColor(int col)
+	{
+	    final int threshold = 127;
+	    int a, r, g, b, luminance;
+	    a = (col >> 24) & 0xff;
+	    if (a != 0xff) 
+	    {// Ignore transparencies
+	        return false;
+	    }
+	    r = (col >> 16) & 0xff;
+	    g = (col >> 8) & 0xff;
+	    b = col & 0xff;
+	    luminance = (int) (0.299 * r + 0.587 * g + 0.114 * b);
+
+	    return luminance < threshold;
+	 }
+	
+	public int ConnectDevice(int PortID, int timeout)
+	{
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		try 
+		{
+			
+			if(!isPrinterDeviceConnected)
+			{
+				MyFormatter.strSourceMethodName = "ConnectDevice";		
+				String  strComPort="";
+				if(PortID==5)
+		          strComPort ="/dev/ttyACM0";
+				
+				if(PortID==6 || PortID==7)
+			          strComPort ="/dev/ttyACM1";
+				
+				 strComPort ="COM6";
+				
+		        WriteLog(Level.INFO, "PortId:" + strComPort + "; Timeout: " + timeout);
+		        
+		        serialPort = new SerialPort(strComPort);
+		        printPort = serialPort;
+		        isPrinterDeviceConnected = true;
+	            if(serialPort != null)
+		        {
+					// opening port
+		            if(serialPort.openPort() == true)
+		            {
+		            	isPortOpened=true;
+			            serialPort.setParams(SerialPort.BAUDRATE_38400, 	//SerialPort.BAUDRATE_9600,
+			                                 SerialPort.DATABITS_8,
+			                                 SerialPort.STOPBITS_1,
+			                                 SerialPort.PARITY_NONE);		
+		            }
+
+		            byte[] blackmark = new byte[]{ 0x1D, 0x45, 0x00 };		            
+		            serialPort.writeBytes(blackmark);
+		            Thread.sleep(200);	            
+		            
+		            byte[] status = new byte[]{ 0x1D, 0x72, 0x01 };
+       
+		            serialPort.writeBytes(status);
+		            Thread.sleep(500);
+		            objCRDResponse.res=serialPort.readHexString();
+		            int firstStatus = Integer.parseInt(objCRDResponse.res.substring(0, 2),16);
+		            if (true)
+					 {				 
+						switch(firstStatus)
+						{
+							case 0:   //Success [Printer Ready]
+							{
+								objCRDResponse.response=0;
+							}
+							break;
+							
+							/*case 1:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 6;
+							}
+							break;
+							
+							case 2:		//Platen Head Open [Printer Not Ready]
+							{
+								objCRDResponse.response = 2;
+							}
+							break;
+							case 3:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 6;
+							}
+							break;
+							case 4:		//Other Error
+							{
+								objCRDResponse.response = 31;
+							}
+							break;
+							case 8:		//Paper roll nearly Empty
+							{
+								objCRDResponse.response = 5;
+							}
+							break;
+							
+							default : 
+								objCRDResponse.response = 28;*/
+							
+						}
+					 }                
+		        }
+		        else
+				{
+		        	objCRDResponse.response=28;
+				}		
+			
+			}
+			else
+			{
+				return 20;
+			}
+		}
+		catch(Exception e2)
+		{			
+			objCRDResponse.response=28;
+	        WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;	
+	}
+	
+	/** To get the Printer FW Version*/
+	public String GetPrinterFWVersion()
+	{
+		MyFormatter.strSourceMethodName = "GetPrinterFWVersion";		
+        WriteLog(Level.INFO, "called");
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		String response="";
+		try
+		{			
+			byte[] status =  new byte[]{ 0x1D, 0x49, 0x41 };
+	         
+            serialPort.writeBytes(status);
+            Thread.sleep(100);
+            response=objCRDResponse.res=serialPort.readString();
+            if(response ==null)
+            	response="01.00.00";
+		}
+		catch(Exception e2)
+		{
+			response="00.00.00";
+		     WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		
+		return response;
+	}
+	
+	/** To get the Native Library*/
+	public String GetNativeLibVersion()
+	{
+		MyFormatter.strSourceMethodName = "GetNativeLibVersion";		
+        WriteLog(Level.INFO, "called");
+		String response="";
+		try
+		{
+            response="01.00.00";//Native lib Version = 1.1.0
+		}
+		catch(Exception e2)
+		{
+			response= "00.00.00";
+			 WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + response);
+		return response;
+	}	
+	
+	/** This API communicates the Printer device status*/
+	public int GetPrinterStatus(int Timeout)
+	{
+		MyFormatter.strSourceMethodName = "GetPrinterStatus";		
+        WriteLog(Level.INFO, "called");
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		try
+		{
+			if(isPrinterDeviceConnected)
+			{
+				byte[] status = new byte[]{ 0x1B, 0x53 };
+	            serialPort.writeBytes(status);
+	            Thread.sleep(500);
+	            objCRDResponse.res=serialPort.readHexString();
+	            System.out.println(objCRDResponse.res);
+	            int firstStatus = Integer.parseInt(objCRDResponse.res.substring(0, 2),16);
+	            if (true)
+				 {            	
+					switch(firstStatus)
+					{
+						case 0:   //Success [Printer Ready]
+						{
+							objCRDResponse.response=1;
+						}
+						break;					
+						case 1:		//Paper Roll Empty
+						{
+							objCRDResponse.response = 6;
+						}
+						break;					
+						case 2:		//Platen Head Open [Printer Not Ready]
+						{
+							objCRDResponse.response = 2;
+						}
+						break;
+						case 3:		//Paper Roll Empty
+						{
+							objCRDResponse.response = 6;
+						}
+						break;
+						case 4:		//Other Error
+						{
+							objCRDResponse.response = 31;
+						}
+						break;
+						case 8:		//Paper roll nearly Empty
+						{
+							objCRDResponse.response = 5;
+						}
+						break;
+						
+						default : 
+							objCRDResponse.response = 28;					
+					}
+				 }
+			
+			}
+			else
+			{
+				return 20;
+			}
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.response = 28;
+			WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;
+	}	
+	
+	/** This API will be used to disconnect the printer device*/
+	public int DisConnectDevice(int Timeout) 
+	{
+		MyFormatter.strSourceMethodName = "DisConnectDevice";		
+        WriteLog(Level.INFO, "called");
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		try 
+		{
+			if(isPrinterDeviceConnected)
+			{
+				isPortOpened=false;
+				serialPort.closePort();
+				serialPort=null;
+				isPrinterDeviceConnected=false;
+				return 0;
+			}
+			else
+			{
+				return 20;
+			}
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.response = 28;//Communication Failure
+			WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;	
+	}
+	
+	/** This API makes the printer ready for printing*/
+	public int StartPrint(int Timeout) 
+	{
+		MyFormatter.strSourceMethodName = "StartPrint";		
+        WriteLog(Level.INFO, "called");
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		try
+		{
+			if(isPrinterDeviceConnected)
+			{
+
+				StopPrint=false;
+				StartPrint=true;
+				//byte[] status = new byte[]{ 0x1B, 0x53 };
+	            //serialPort.writeBytes(status);
+	            //Thread.sleep(100);
+	            //objCRDResponse.res=serialPort.readHexString();
+	            objCRDResponse.response=0;
+	            /*int firstStatus = Integer.parseInt(objCRDResponse.res.substring(0, 2),16);
+				 
+					switch(firstStatus)
+					{
+						case 0:   //Success [Printer Ready]
+						{
+							objCRDResponse.response=0;
+						}
+						break;
+						
+						case 1:		//Paper Roll Empty
+						{
+							objCRDResponse.response = 3;
+						}
+						break;
+						
+						case 2:		//Platen Head Open [Printer Not Ready]
+						{
+							objCRDResponse.response = 1;
+						}
+						break;
+						case 3:		//Paper Roll Empty
+						{
+							objCRDResponse.response = 4;
+						}
+						break;
+						case 8:		//Paper roll nearly Empty
+						{
+							objCRDResponse.response = 3;
+						}
+						break;
+						
+						default : 
+							objCRDResponse.response = 31;					
+					}*/
+			
+			}
+			else
+			{
+			   return 20;	
+			}
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.response = 28;
+			 WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;
+	}
+	
+	/** This API ends the printing and cut the paper*/
+	public int EndPrint(int PaperCuttingMethod, int Timeout) 
+	{
+		MyFormatter.strSourceMethodName = "EndPrint";		
+        WriteLog(Level.INFO, "called");
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		try
+		{
+			if (isPrinterDeviceConnected) 
+			{
+
+				StopPrint=true;
+				StartPrint=false;
+				byte[] status = new byte[]{ 0x1B, 0x69 };
+	            serialPort.writeBytes(status);
+	            //Thread.sleep(1000);
+	            objCRDResponse.response=0;
+	            //status = new byte[]{ 0x1B, 0x53 };
+	            //serialPort.writeBytes(status);
+	            // Thread.sleep(200);
+	            // objCRDResponse.res=serialPort.readHexString();
+	           
+	            //System.out.println("objCRDResponse.res : "+objCRDResponse.res);
+	             int firstStatus = 0;//Integer.parseInt(objCRDResponse.res.substring(0, 2),16);
+				 
+					switch(firstStatus)
+					{
+						case 0:   //Success [Printer Ready]
+						{
+							objCRDResponse.response=0;
+						}
+						break;
+						
+						case 1:		//Paper Roll Empty
+						{
+							objCRDResponse.response = 3;
+						}
+						break;
+						
+						case 2:		//Platen Head Open [Printer Not Ready]
+						{
+							objCRDResponse.response = 1;
+						}
+						break;
+						case 3:		//Paper Roll Empty
+						{
+							objCRDResponse.response = 4;
+						}
+						break;
+						case 8:		//Paper roll nearly Empty
+						{
+							objCRDResponse.response = 3;
+						}
+						break;
+						
+						default : 
+							objCRDResponse.response = 31;					
+					}
+			
+			}
+			else
+			{
+              return 20;
+			}
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.response = 28;
+			WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;
+	}
+	
+	/** This API prints a Logo (images e.g. .png)*/
+	public int PrintLogo(byte[] Logo, int Alignment, int Timeout)
+	{
+		MyFormatter.strSourceMethodName = "PrintLogo";		
+        WriteLog(Level.INFO, "called");
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		
+		byte[] justify=null;
+		byte[] ljustify = new byte[]{ 0x1b, 0x61, 0x00 };//This is left-aligned 
+		byte[] LogoImage = new byte[0x1000];
+		int LogoImageIndex=0;
+		switch (Alignment)
+		{
+			case 1:justify = new byte[]{ 0x1b, 0x61, 0x00 };//This is left-aligned 
+				break;
+			case 2:justify = new byte[]{ 0x1b, 0x61, 0x02 };//This is right-aligned 
+				break;
+			default:justify = new byte[]{ 0x1b, 0x61, 0x01 };//This is centered 
+				break;
+		}
+		
+		try
+		{
+			if(isPrinterDeviceConnected)
+			{
+				if(StartPrint)
+				{
+		            Thread.sleep(100);		
+		            //byte[] combined = new byte[justify.length + Logo.length+3];
+					//System.arraycopy(justify,0,combined,0,justify.length);
+					//System.arraycopy(Logo,0,combined,justify.length,Logo.length);
+					//System.arraycopy(ljustify,0,combined,justify.length+Logo.length,ljustify.length);			
+					//serialPort.writeBytes(combined);	
+					
+		            System.arraycopy(justify,0,LogoImage,LogoImageIndex,justify.length);					 
+					LogoImageIndex += justify.length;
+		            
+		            
+					InputStream in = new ByteArrayInputStream(Logo);					
+					//BufferedImage bi =(BufferedImage) ImageIO.read(new File("/var/lipi/AMK.bmp"));
+					BufferedImage bi =(BufferedImage) ImageIO.read(in);
+					int[][] pixels = getPixelsSlow(bi);					
+					
+					//printImage(pixels);				
+					 
+					 //printPort.writeBytes(SET_LINE_SPACE_24);
+					 System.arraycopy(SET_LINE_SPACE_24,0,LogoImage,LogoImageIndex,SET_LINE_SPACE_24.length);					 
+					 LogoImageIndex += SET_LINE_SPACE_24.length;
+					 					 
+					 for (int y = 0; y < pixels.length; y += 24)
+					 {
+					   //printPort.writeBytes(SELECT_BIT_IMAGE_MODE);
+						 System.arraycopy(SELECT_BIT_IMAGE_MODE,0,LogoImage,LogoImageIndex,SELECT_BIT_IMAGE_MODE.length);					 
+						 LogoImageIndex += SELECT_BIT_IMAGE_MODE.length;
+						 
+					    byte[] temp =new byte[]{(byte)(0x00ff & pixels[y].length)
+					                             , (byte)((0xff00 & pixels[y].length) >> 8)};
+					    
+						 System.arraycopy(temp,0,LogoImage,LogoImageIndex,temp.length);					 
+						 LogoImageIndex += temp.length;
+					   
+					   for (int x = 0; x < pixels[y].length; x++)
+					   {
+						   byte[] temp1 = recollectSlice(y, x, pixels);
+						   //printPort.writeBytes(recollectSlice(y, x, pixels));
+						   System.arraycopy(temp1,0,LogoImage,LogoImageIndex,temp1.length);					 
+						   LogoImageIndex += temp1.length;					     
+					   }
+					   
+					   //printPort.writeBytes(FEED_LINE);
+						 System.arraycopy(FEED_LINE,0,LogoImage,LogoImageIndex,FEED_LINE.length);					 
+						 LogoImageIndex += FEED_LINE.length;
+					   
+					 }
+					   //printPort.writeBytes(SET_LINE_SPACE_30);
+						 System.arraycopy(SET_LINE_SPACE_30,0,LogoImage,LogoImageIndex,SET_LINE_SPACE_30.length);					 
+						 LogoImageIndex += SET_LINE_SPACE_30.length;
+						 
+						 // Reset to Left Justify 
+						 System.arraycopy(ljustify,0,LogoImage,LogoImageIndex,ljustify.length);					 
+						 LogoImageIndex += ljustify.length;
+						 
+						 byte FinalLogoBuffer[] = new byte[LogoImageIndex];
+						 
+						 System.arraycopy(LogoImage,0,FinalLogoBuffer,0,LogoImageIndex);
+						 
+						 serialPort.writeBytes(FinalLogoBuffer);
+						 
+		            Thread.sleep(500);		            
+		            byte[]status = new byte[]{ 0x1B, 0x53 };
+		            serialPort.writeBytes(status);
+		            Thread.sleep(300);
+		            objCRDResponse.res=serialPort.readHexString();
+		            // System.out.println("objCRDResponse.res : "+objCRDResponse.res);
+		            int firstStatus = 0;//Integer.parseInt(objCRDResponse.res.substring(0, 2),16);
+					 
+						switch(firstStatus)
+						{
+							case 0:   //Success [Printer Ready]
+							{
+								objCRDResponse.response=0;
+							}
+							break;						
+							case 1:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 3;
+							}
+							break;						
+							case 2:		//Platen Head Open [Printer Not Ready]
+							{
+								objCRDResponse.response = 1;
+							}
+							break;
+							case 3:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 4;
+							}
+							break;
+							case 8:		//Paper roll nearly Empty
+							{
+								objCRDResponse.response = 3;
+							}
+							break;						
+							default : 
+								objCRDResponse.response = 31;						
+						}
+				}
+				else
+				{
+					objCRDResponse.response = 1;  //Printed Connected But Ready For Print
+					//objCRDResponse.res="Printing Not Enabled";
+				}				           
+			
+			}
+			else
+			{
+				return 20;
+			}
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.response = 28;
+			WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;
+	}
+	
+	/** This API Prints line of text at the next line*/
+	public int PrintTextLine(String Text, int Alignment, int Timeout)
+	{
+		MyFormatter.strSourceMethodName = "PrintTextLine";		
+        WriteLog(Level.INFO, "called");
+		byte content [] = (Text+"\n").getBytes();
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		byte[] justify=null;
+		
+		switch (Alignment) 
+		{
+		case 1:justify = new byte[]{ 0x1b, 0x61, 0x00 };//This is left-aligned 
+			break;
+		case 2:justify = new byte[]{ 0x1b, 0x61, 0x02 };//This is right-aligned 
+			break;
+		default:justify = new byte[]{ 0x1b, 0x61, 0x01 };//This is centered 
+			break;
+		}
+		
+		try
+		{
+			if(isPrinterDeviceConnected)
+			{
+
+				if(StartPrint)
+				{
+					byte[] combined = new byte[justify.length + content.length+3];
+					byte[] ljustify = new byte[]{ 0x1b, 0x61, 0x00};
+					System.arraycopy(justify,0,combined,0,justify.length);
+					System.arraycopy(content,0,combined,justify.length,content.length);
+					System.arraycopy(ljustify,0,combined,justify.length+content.length,ljustify.length);
+					serialPort.writeBytes(combined);					
+					
+					Thread.sleep(500);
+					objCRDResponse.response=0;
+		           /* byte[] status = new byte[]{ 0x1B, 0x53 };
+		            serialPort.writeBytes(status);
+		            Thread.sleep(100);
+		            objCRDResponse.res=serialPort.readHexString();
+		            int firstStatus = Integer.parseInt(objCRDResponse.res.substring(0, 2),16);
+		            
+					
+		    		switch(firstStatus)
+						{
+							case 0:   //Success [Printer Ready]
+							{
+								objCRDResponse.response=0;
+							}
+							break;
+							
+							case 1:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 3;
+							}
+							break;
+							
+							case 2:		//Platen Head Open [Printer Not Ready]
+							{
+								objCRDResponse.response = 1;
+							}
+							break;
+							case 3:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 4;
+							}
+							break;
+							case 8:		//Paper roll nearly Empty
+							{
+								objCRDResponse.response = 3;
+							}
+							break;
+							
+							default : 
+								objCRDResponse.response = 31;
+							
+						}*/
+				}
+				else
+				{
+					objCRDResponse.response = 1;  //Printed Connected But Ready For Print
+				}
+					           
+			
+			}
+			else
+			{
+				return 20;
+			}
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.response = 28;
+			WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;
+	}
+	
+	/** This API leaves a blank line*/
+	public int PrintBlankLine(int Timeout)
+	{
+		MyFormatter.strSourceMethodName = "PrintBlankLine";		
+        WriteLog(Level.INFO, "called");
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		try
+		{
+			if(isPrinterDeviceConnected)
+			{
+
+				if(StartPrint)
+				{
+					byte[] brr=(" \n").getBytes();
+					serialPort.writeBytes(brr);
+		            Thread.sleep(200);
+		            objCRDResponse.response=0;
+		            /*byte[] status = new byte[]{ 0x1B, 0x53 };
+		            serialPort.writeBytes(status);
+		            Thread.sleep(100);
+		            objCRDResponse.res=serialPort.readHexString();
+		            int firstStatus = Integer.parseInt(objCRDResponse.res.substring(0, 2),16);
+					 
+						switch(firstStatus)
+						{
+							case 0:   //Success [Printer Ready]
+							{
+								objCRDResponse.response=0;
+							}
+							break;
+							
+							case 1:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 3;
+							}
+							break;
+							
+							case 2:		//Platen Head Open [Printer Not Ready]
+							{
+								objCRDResponse.response = 1;
+							}
+							break;
+							case 3:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 4;
+							}
+							break;
+							case 8:		//Paper roll nearly Empty
+							{
+								objCRDResponse.response = 3;
+							}
+							break;
+							
+							default : 
+								objCRDResponse.response = 31;
+							
+						}*/
+				}
+				else
+				{
+					objCRDResponse.response = 1;
+				}	
+			}
+			else
+			{
+              return 20;
+			}
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.response = 28;
+			WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;
+	}
+	
+	/** This API transport a printing command to the printer*/
+	public int XChangeCommande(String Command, int Timeout)
+	{
+		MyFormatter.strSourceMethodName = "XChangeCommande";		
+        WriteLog(Level.INFO, "called");
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		try
+		{
+			if(isPrinterDeviceConnected)
+			{
+				if(StartPrint)
+				{
+					String[] spiltData=Command.split("#");
+			        byte[] status=null;
+			        switch (spiltData[0].toLowerCase().toString())
+			        {
+					  case "bold":
+						    status = new byte[]{ 0x1B, 0x33, 0x08 };
+						    break;
+					  case "normal":
+						    status = new byte[]{ 0x1B, 0x33, 0x00 };
+							break;
+					  case "lf":
+						    status = new byte[]{ 0x0A };
+							break;
+					  case "cut":
+						    status = new byte[]{ 0x1B, 0x69 };
+							break;
+					  case "dbwidth":
+						    status = new byte[]{ 0x1B, 0x33, 0x20 };
+							break;
+					  case "reset":
+						    status = new byte[]{ 0x1B, 0x40 };
+							break;
+					  case "left":
+						    status = new byte[]{ 0x1B, 0x61, 0x30 };
+							break;
+					  case "center":
+						    status = new byte[]{ 0x1B, 0x61, 0x31 };
+							break;
+					  case "right":
+						    status = new byte[]{ 0x1B, 0x61,0x32 };
+							break;
+					  default:
+						break;
+					}
+					serialPort.writeBytes(status);
+		            Thread.sleep(100);
+		            
+		           /* if(spiltData[0].toLowerCase().toLowerCase().contains("bold"))
+		            {
+		            	byte[] data=spiltData[1].toString().getBytes();
+		            	serialPort.writeBytes(data);
+		            }*/
+		            objCRDResponse.response=0;
+				}
+				else
+				{
+					objCRDResponse.response = 1;
+				}
+			}
+			else
+			{
+				return 20;
+			}
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.response = 28;	
+			e2.printStackTrace();
+			WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;
+	}
+	
+	public int XChangeCommande(byte[] Command, int Timeout)
+	{
+		MyFormatter.strSourceMethodName = "XChangeCommande";		
+        WriteLog(Level.INFO, "called");
+		Printer_CRDResponse objCRDResponse=new Printer_CRDResponse();
+		try
+		{
+			if(isPrinterDeviceConnected)
+			{
+
+				if(StartPrint)
+				{
+					//byte[] brr=("\n"+Command).getBytes();
+					serialPort.writeBytes(Command);
+		            Thread.sleep(100);
+		            /* byte[] status = new byte[]{ 0x1B, 0x53 };
+		            serialPort.writeBytes(status);
+		            Thread.sleep(100);
+		            objCRDResponse.res=serialPort.readHexString();
+		            int firstStatus = Integer.parseInt(objCRDResponse.res.substring(0, 2),16);
+					 
+						switch(firstStatus)
+						{
+							case 0:   //Success [Printer Ready]
+							{
+								objCRDResponse.response=0;
+							}
+							break;
+							
+							case 1:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 3;
+							}
+							break;
+							
+							case 2:		//Platen Head Open [Printer Not Ready]
+							{
+								objCRDResponse.response = 1;
+							}
+							break;
+							case 3:		//Paper Roll Empty
+							{
+								objCRDResponse.response = 4;
+							}
+							break;
+							case 8:		//Paper roll nearly Empty
+							{
+								objCRDResponse.response = 3;
+							}
+							break;
+							
+							default : 
+								objCRDResponse.response = 31;
+							
+						}*/
+				}
+				else
+				{
+					objCRDResponse.response = 20;
+				}
+					           
+			
+			}
+			else
+			{
+				return 20;
+			}
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.response = 28;	
+			e2.printStackTrace();
+			WriteLog(Level.WARNING, e2.getMessage());
+			StringWriter errors = new StringWriter();
+			e2.printStackTrace(new PrintWriter(errors));			
+			WriteLog(Level.FINEST, errors.toString());
+		}
+		WriteLog(Level.FINEST, "Return value- " + objCRDResponse.response);
+		return objCRDResponse.response;
+	}
+	
+}
+
+class Printer_CRDResponse 
+{
+
+	public String strErrDesc="";
+	public String res="";
+	public int response;
+}
+
+

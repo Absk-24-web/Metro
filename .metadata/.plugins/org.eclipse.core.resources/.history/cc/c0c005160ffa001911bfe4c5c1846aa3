@@ -1,0 +1,12 @@
+import Cris.Security;
+
+public class SS 
+{
+
+	public static void main(String[] args) 
+	{
+		
+       Security obj=new Security();
+	}
+
+}

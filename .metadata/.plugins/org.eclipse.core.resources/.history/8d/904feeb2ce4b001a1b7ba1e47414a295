@@ -1,0 +1,327 @@
+import java.awt.Button;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
+
+
+import Cris.Printer;
+import jssc.SerialPort;
+
+public class MainWindow 
+{
+
+	protected Shell shell;
+	private Text txtResponseSheet;
+	private String strOSType;
+	private static SerialPort serialPort;
+	private Text textExchangeData;
+	public Printer objPrinter=new Printer();
+	private Text textPrinterPort;
+	private Text textPrintTextLine;
+	
+	
+	public static void main(String[] args)
+	{
+		try 
+		{
+			MainWindow window = new MainWindow();
+			window.open();
+		} 
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}	
+	
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shell.open();
+		shell.layout();
+		while (!shell.isDisposed()) {
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
+	}
+	
+	
+	protected void createContents() 
+	{
+		shell = new Shell();
+		shell.setSize(new Point(530, 575));
+		shell.setSize(530, 600);
+		shell.setText("SWT Application");
+		
+		strOSType = System.getProperty("os.name").toLowerCase();
+		
+		txtResponseSheet = new Text(shell, SWT.BORDER | SWT.V_SCROLL | SWT.MULTI);
+		//txtResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		txtResponseSheet.setBounds(10, 349, 486, 168);
+		
+		Label lblResponse = new Label(shell, SWT.NONE);
+		lblResponse.setText("Response");
+		//lblResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblResponse.setBounds(10, 301, 72, 25);
+		/*if(strOSType.indexOf("win") >= 0)
+			cmbCOMPort.setItems(new String[] {"Select", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"});
+		else
+			cmbCOMPort.setItems(new String[] {"Select", "/dev/ttyS0", "/dev/ttyS1", "/dev/ttyS2", "/dev/ttyS3", "/dev/ttyS4", "/dev/ttyS5", "/dev/ttyS6", "/dev/ttyS7", "/dev/ttyS8", "/dev/ttyS9"});*/
+		
+		Label lblStatusVal = new Label(shell, SWT.NONE);
+		lblStatusVal.setText("");
+		//lblStatusVal.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStatusVal.setBounds(46, 523, 435, 28);
+		
+		Button btnClear = new Button(shell, SWT.NONE);		
+		btnClear.setText("Clear");
+		//btnClear.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnClear.setBounds(418, 301, 87, 30);
+		
+		Button btnPrinterS = new Button(shell, SWT.NONE);
+		btnPrinterS.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				int res= objPrinter.GetPrinterStatus(100);
+				txtResponseSheet.setText("");
+				txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nConnect Response :- "+res);
+			}
+		});
+		btnPrinterS.setText("GetPrinterStatus");
+		//btnReset.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnPrinterS.setBounds(340, 10, 156, 46);
+		//formToolkit.adapt(btnLivePacket, true, true);
+		
+		Button btnInitializeDevice = new Button(shell, SWT.NONE);
+		btnInitializeDevice.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				int PortId=Integer.parseInt(textPrinterPort.getText().toString());
+				int res= objPrinter.ConnectDevice(PortId, 100);
+				//txtResponseSheet.setText("");
+				txtResponseSheet.append("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nConnect Response :- "+res);
+			}
+		});
+		btnInitializeDevice.setText("Connect Device");
+		//btnInitializeDevice.setForeground(SWTResourceManager.getColor(SWT.COLOR_BLACK));
+		//btnInitializeDevice.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnInitializeDevice.setBounds(10, 62, 112, 46);
+		
+		Button btnD = new Button(shell, SWT.NONE);
+		btnD.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				String s=textExchangeData.getText().toString();
+				int res= objPrinter.XChangeCommande(s, 100);
+				//txtResponseSheet.setText("");
+				//txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nXChangeCommande Response :- "+res);
+				
+			}
+		});
+		btnD.setText("ExchangeCommand");
+		btnD.setBounds(337, 239, 159, 48);
+		
+		Button btnGetFwVersion = new Button(shell, SWT.NONE);
+		btnGetFwVersion.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+
+				String res= objPrinter.GetPrinterFWVersion();
+				//txtResponseSheet.setText("");
+				//txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nGetPrinterFWVersion Response :- "+res);
+			
+				
+			}
+		});
+		btnGetFwVersion.setText("GetPrinterFWVersion");
+		btnGetFwVersion.setBounds(175, 114, 159, 46);
+		
+		Button btnPrintLogo = new Button(shell, SWT.NONE);
+		btnPrintLogo.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				try
+				{
+					byte[] logo=Files.readAllBytes(Paths.get("C:\\LipiID140319.png"));
+					int res= objPrinter.PrintLogo(logo, 0, 100);
+					//txtResponseSheet.setText("");
+					//txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+					txtResponseSheet.append("\r\nPrintLogo Response :- "+res);
+				}
+				catch (IOException e1)
+				{
+				}
+			}
+		});
+		btnPrintLogo.setText("Print Logo");
+		btnPrintLogo.setBounds(340, 114, 156, 46);
+		
+		Button btnStartPrint = new Button(shell, SWT.NONE);
+		btnStartPrint.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+
+				int res= objPrinter.StartPrint(100);
+				//txtResponseSheet.setText("");
+				//txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nStartPrint Response :- "+res);
+			
+			}
+		});
+		btnStartPrint.setText("Start Print");
+		btnStartPrint.setBounds(10, 165, 159, 46);
+		
+		Button btnStopPrint = new Button(shell, SWT.NONE);
+		btnStopPrint.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				int res= objPrinter.EndPrint(0, 100);
+				//txtResponseSheet.setText("");
+				//txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nEndPrint Response :- "+res);
+			}
+		});
+		btnStopPrint.setText("Stop Print");
+		btnStopPrint.setBounds(175, 165, 159, 46);
+		
+		Button btnDisconnect = new Button(shell, SWT.NONE);
+		btnDisconnect.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				int res= objPrinter.DisConnectDevice(100);
+				//txtResponseSheet.setText("");
+				//txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nDisConnect Response :- "+res);
+			}
+		});
+		btnDisconnect.setText("Disconnect Device");
+		btnDisconnect.setBounds(10, 114, 159, 46);
+		
+		Button btnGetnativelibversion = new Button(shell, SWT.NONE);
+		btnGetnativelibversion.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+
+				String res= objPrinter.GetNativeLibVersion();
+				//txtResponseSheet.setText("");
+				//txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nConnect Response :- "+res);
+			
+			}
+		});
+		btnGetnativelibversion.setText("GetNativeLibVersion");
+		btnGetnativelibversion.setBounds(175, 10, 159, 46);
+		
+		Button btnPrinttextline = new Button(shell, SWT.NONE);
+		btnPrinttextline.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+                String Text=textPrintTextLine.getText().toString();
+				int res= objPrinter.PrintTextLine(Text, 0, 100);
+				//txtResponseSheet.setText("");
+				//txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nPrintTextLine Response :- "+res);
+			
+			}
+		});
+		btnPrinttextline.setText("PrintTextLine");
+		btnPrinttextline.setBounds(365, 62, 131, 46);
+		
+		Button btnPrintblankline = new Button(shell, SWT.NONE);
+		btnPrintblankline.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				int res= objPrinter.PrintBlankLine(0);
+				//txtResponseSheet.setText("");
+				//txtResponseSheet.setText("\r\n******PrinterDevice*******\r\n");
+				txtResponseSheet.append("\r\nPrintBlankLine Response :- "+res);
+			}
+		});
+		btnPrintblankline.setText("PrintBlankLine");
+		btnPrintblankline.setBounds(340, 165, 156, 46);
+		
+		textExchangeData = new Text(shell, SWT.BORDER);
+		textExchangeData.setBounds(20, 241, 277, 46);
+		
+		Label lblNewLabel = new Label(shell, SWT.NONE);
+		lblNewLabel.setBounds(44, 217, 253, 21);
+		lblNewLabel.setText("Enter The Command You want To Exchange");
+		
+		textPrinterPort = new Text(shell, SWT.BORDER);
+		textPrinterPort.setBounds(10, 31, 159, 25);
+		
+		Label lblNewLabel_1 = new Label(shell, SWT.NONE);
+		lblNewLabel_1.setBounds(44, 0, 78, 25);
+		lblNewLabel_1.setText("Enter Port");
+		
+		Button btnExit = new Button(shell, SWT.NONE);
+		btnExit.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				System.exit(0);
+			}
+		});
+		btnExit.setText("EXIT");
+		btnExit.setBounds(88, 301, 109, 42);
+		
+		textPrintTextLine = new Text(shell, SWT.BORDER);
+		textPrintTextLine.setBounds(128, 62, 231, 46);
+		shell.setTabList(new Control[]{btnClear, txtResponseSheet});
+		
+		// Clear button functioning
+		btnClear.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					txtResponseSheet.setText("");
+				}
+				catch(Exception e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+	}
+}
+

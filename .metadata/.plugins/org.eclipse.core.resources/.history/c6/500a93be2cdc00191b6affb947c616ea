@@ -1,0 +1,119 @@
+
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
+import jssc.SerialPort;
+
+public class RecieptPrinter
+{	
+	
+	private static SerialPort serialPort = null;
+	private static SerialPort serialPort1 = null;
+	public static Thread thCoinAccept = null;		
+	
+	
+	public CRDResponse Initialize(String strComPort, int iBaudRate)
+	{
+		CRDResponse obj=new CRDResponse();
+		try 
+		{	
+			// writing to port
+	        serialPort = new SerialPort(strComPort);
+	        
+	        if(serialPort != null)
+	        {
+				// opening port
+	            if(serialPort.openPort() == true)
+	            {
+		            serialPort.setParams(SerialPort.BAUDRATE_38400, 	//SerialPort.BAUDRATE_9600,
+		                                 SerialPort.DATABITS_8,
+		                                 SerialPort.STOPBITS_1,
+		                                 SerialPort.PARITY_NONE);		
+	            }
+		         
+	            
+	            byte[] byInitializeCmd = new byte[]{ 0x1D, 0x49, 0x41 };
+			    serialPort.writeBytes(byInitializeCmd);
+			    Thread.sleep(1000);
+			    obj.res= serialPort.readString();
+                
+	        }
+	        else
+			{
+	        	obj.res="Error in INIT";
+			}		
+		}
+		catch(Exception e2)
+		{
+			obj.res=e2.toString();
+		}
+		return obj;
+	
+	}
+	
+	public CRDResponse GetStatus()
+	{
+		CRDResponse objCRDResponse = new CRDResponse();
+		try
+		{
+			
+			byte[] status = new byte[]{ 0x1D, 0x72, 0x01 };
+	         
+            serialPort.writeBytes(status);
+            Thread.sleep(1000);
+            objCRDResponse.res=serialPort.readHexString();
+
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.strErrDesc = e2.getMessage();
+			e2.printStackTrace();
+		}
+		
+		return objCRDResponse;
+	}
+	
+	public CRDResponse SamplePrint()
+	{
+		CRDResponse objCRDResponse = new CRDResponse();
+		try
+		{
+			
+			byte[] brr=Files.readAllBytes(Paths.get("SampleRecepit.txt"));
+			serialPort.writeBytes(brr);
+            Thread.sleep(1000);
+            objCRDResponse.res="Sample Printing Success";
+	 
+	           
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.strErrDesc = e2.toString();
+			e2.printStackTrace();
+		}
+		
+		return objCRDResponse;
+	}
+
+	public CRDResponse DeInit() 
+	{
+		CRDResponse objCRDResponse=new CRDResponse();
+		try 
+		{	
+			serialPort.closePort();
+			objCRDResponse.res="DeInitialize Printer Success";
+		}
+		catch(Exception e2)
+		{
+			objCRDResponse.strErrDesc = e2.toString();
+			e2.printStackTrace();
+		}
+		return objCRDResponse;
+	
+	}
+
+	
+}
+
+

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Copy element &apos;CRDResponse.java&apos; to &apos;BnrCashJar/src/(default package)&apos;&#x0D;&#x0A;- Original project: &apos;UpsJar&apos;&#x0D;&#x0A;- Destination element: &apos;BnrCashJar/src/(default package)&apos;&#x0D;&#x0A;- Original element: &apos;CRDResponse.java&apos;" description="Copy compilation unit" destination="=BnrCashJar/src&lt;" element1="/src&lt;{CRDResponse.java" files="0" flags="589830" folders="0" id="org.eclipse.jdt.ui.copy" policy="org.eclipse.jdt.ui.copyResources" stamp="1561957006352" units="1" version="1.0"/>
+</session>

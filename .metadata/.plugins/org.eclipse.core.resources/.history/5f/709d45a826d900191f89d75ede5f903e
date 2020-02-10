@@ -1,0 +1,722 @@
+package lipi;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
+
+import jssc.SerialPort;
+import jssc.SerialPortList;
+import org.eclipse.swt.graphics.Point;
+
+public class MainWindow 
+{
+
+	protected Shell shell;
+	private Text txtResponse;
+	
+	private String strOSType;
+	
+	private Label lblComPort;
+	private Combo cmbCOMPort;
+	
+	private Label lblBaudRate;
+	private Combo cmbBaudRate;
+	private static SerialPort serialPort;
+	
+	private TokenDispenser objCRD;
+	private TokenDispenserResponse objRes;
+	private Text txtNoOfToken;
+	private Text txtRechargeAmount;
+	
+	/*private CommPortIdentifier portIdentifier = null;
+	private CommPort commPort = null;
+	private SerialPort serialPort = null;
+	private ParallelPort parallelPort = null;*/
+
+	/**
+	 * Launch the application.
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		try {
+			
+			MainWindow window = new MainWindow();
+			window.open();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}	
+	
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shell.open();
+		shell.layout();
+		while (!shell.isDisposed()) {
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
+	}
+	
+	public static byte GetBCC(byte []p,int n)
+	{
+		byte  ch;
+		int	i; 
+		byte crc = (byte)0x00;
+	
+		for(i=0;i<n;i++)
+		{
+			ch = p[i];				
+			crc = (byte)(ch ^ crc);
+		}		
+		return crc;
+	}
+	
+	public static String GetErrorDesc(byte byE1, byte byE0)
+	{
+		String strRes="";
+		
+		switch(String.format("%02x%02x", byE1, byE0))
+		{
+			case "0000": strRes = "Reception of undefined command";	break;
+			case "0001": strRes = "Command parameter error";	break;
+		}
+		
+		return strRes;
+	}
+
+	/**
+	 * Create contents of the window.
+	 */
+	protected void createContents() 
+	{
+		shell = new Shell();
+		shell.setSize(new Point(1033, 525));
+		shell.setSize(620, 570);
+		shell.setText("SWT Application");
+		
+		strOSType = System.getProperty("os.name").toLowerCase();
+		
+		Label lblInterfaceType = new Label(shell, SWT.NONE);
+		//lblInterfaceType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblInterfaceType.setBounds(52, 10, 78, 25);
+		lblInterfaceType.setText("Select Type");
+		
+		Combo cmbInterfaceType = new Combo(shell, SWT.READ_ONLY);
+		cmbInterfaceType.setItems(new String[] {"Select", "Parallel", "Serial", "USB"});
+		cmbInterfaceType.select(0);
+		//cmbInterfaceType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbInterfaceType.setBounds(10, 36, 159, 23);
+		
+		txtResponse = new Text(shell, SWT.BORDER | SWT.V_SCROLL | SWT.MULTI);
+		//txtResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		txtResponse.setBounds(10, 338, 578, 143);
+		
+		Label lblResponse = new Label(shell, SWT.NONE);
+		lblResponse.setText("Response");
+		//lblResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblResponse.setBounds(10, 307, 72, 25);
+		
+		lblComPort = new Label(shell, SWT.NONE);
+		lblComPort.setText("Port");
+		//lblComPort.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblComPort.setBounds(281, 10, 36, 25);
+		
+		cmbCOMPort = new Combo(shell, SWT.READ_ONLY);
+		if(strOSType.indexOf("win") >= 0)
+			cmbCOMPort.setItems(new String[] {"Select", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"});
+		else
+			cmbCOMPort.setItems(new String[] {"Select", "/dev/ttyS0", "/dev/ttyS1", "/dev/ttyS2", "/dev/ttyS3", "/dev/ttyS4", "/dev/ttyS5", "/dev/ttyS6", "/dev/ttyS7", "/dev/ttyS8", "/dev/ttyS9"});
+		cmbCOMPort.select(0);
+		//cmbCOMPort.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbCOMPort.setBounds(212, 36, 162, 23);
+		
+		lblBaudRate = new Label(shell, SWT.NONE);
+		lblBaudRate.setText("Baud Rate");
+		//lblBaudRate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblBaudRate.setBounds(477, 10, 78, 25);
+		
+		cmbBaudRate = new Combo(shell, SWT.READ_ONLY);
+		cmbBaudRate.setItems(new String[] {"Select", "115200","38400", "9600", "19200"});
+		cmbBaudRate.select(0);
+		//cmbBaudRate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbBaudRate.setBounds(426, 36, 162, 23);
+		
+		Label lblStatusVal = new Label(shell, SWT.NONE);
+		lblStatusVal.setText("");
+		//lblStatusVal.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStatusVal.setBounds(10, 487, 576, 28);
+		
+		Button btnClear = new Button(shell, SWT.NONE);		
+		btnClear.setText("Clear");
+		//btnClear.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnClear.setBounds(501, 296, 87, 30);
+		
+		Button btnReset = new Button(shell, SWT.NONE);
+		btnReset.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+									
+				if(objCRD == null)
+					objCRD = new TokenDispenser();
+				
+				//txtResponse.setText("");
+				
+				objRes = objCRD.Reset();
+				txtResponse.append("Reset Response:- "+objRes.res+"\r\n");
+									
+			}
+		});
+		btnReset.setText("Reset");
+		//btnReset.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnReset.setBounds(294, 79, 136, 30);
+		//formToolkit.adapt(btnReset, true, true);
+		
+		Button btnHoperStart = new Button(shell, SWT.NONE);
+		btnHoperStart.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+									
+				if(objCRD == null)
+					objCRD = new TokenDispenser();
+				
+				//txtResponse.setText("");
+				
+				objRes = objCRD.Start2();
+				txtResponse.append("Hopper 2 Start Res:- "+objRes.res+"\r\n");
+				txtResponse.append(objRes.resDesc+"\r\n");
+									
+			}
+		});
+		btnHoperStart.setText("Hoper2 Start");
+		//btnHoperStart.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnHoperStart.setBounds(163, 174, 125, 30);
+		//formToolkit.adapt(btnHoperStart, true, true);
+		
+		Button btnHopperStop = new Button(shell, SWT.NONE);
+		btnHopperStop.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+									
+					if(objCRD == null)
+						objCRD = new TokenDispenser();
+					
+					//txtResponse.setText("");
+					
+					objRes = objCRD.Stop2();
+					txtResponse.append("Hopper 2 Stop Res:- "+objRes.res+"\r\n");
+					txtResponse.append(objRes.resDesc+"\r\n");
+									
+			}
+		});
+		btnHopperStop.setText("Hopper2 Stop");
+		//btnHopperStop.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnHopperStop.setBounds(294, 174, 136, 30);
+		//formToolkit.adapt(btnHopperStop, true, true);
+		
+		Button btnHopperStart = new Button(shell, SWT.NONE);
+		btnHopperStart.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+									
+				if(objCRD == null)
+					objCRD = new TokenDispenser();
+				
+				//txtResponse.setText("");
+				
+				objRes = objCRD.Start1();
+				txtResponse.append("Hopper 1 Start Res:- "+objRes.res +"\r\n");
+				txtResponse.append(objRes.resDesc+"\r\n");
+									
+			}
+		});
+		btnHopperStart.setText("Hopper1 Start");
+		//btnHopperStart.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnHopperStart.setBounds(163, 126, 125, 30);
+		//formToolkit.adapt(btnHopperStart, true, true);
+		
+		Button btnEmptyContainer = new Button(shell, SWT.NONE);
+		btnEmptyContainer.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+				try 
+				{
+
+					if(objCRD == null)
+						objCRD = new TokenDispenser();
+					
+					//txtResponse.setText("");
+					
+					objRes = objCRD.EmptyContainer2();
+					
+					txtResponse.append("Empty 1 Container Res:- "+objRes.res+"\r\n");
+					//txtResponse.append(objRes.resDesc+"\r\n");
+						
+					
+				} 
+				catch (NumberFormatException e1)
+				{
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} 
+		}
+		});
+		btnEmptyContainer.setGrayed(true);
+		btnEmptyContainer.setText("Empty Container1");
+		//btnEmptyContainer.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnEmptyContainer.setBounds(10, 174, 147, 30);
+		//formToolkit.adapt(btnEmptyContainer, true, true);
+		
+		Button btnEmptyContainer_1 = new Button(shell, SWT.NONE);
+		btnEmptyContainer_1.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+					try 
+					{
+	
+						if(objCRD == null)
+							objCRD = new TokenDispenser();
+						
+						//txtResponse.setText("");
+						
+						objRes = objCRD.EmptyContainer2();
+						
+						txtResponse.append("Empty 2 Container Res:- "+objRes.res+"\r\n");
+						//txtResponse.append(objRes.resDesc+"\r\n");
+							
+						
+					} 
+					catch (NumberFormatException e1)
+					{
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} 
+			}
+
+		});
+		btnEmptyContainer_1.setText("Empty Container2");
+		//btnEmptyContainer_1.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnEmptyContainer_1.setBounds(10, 222, 147, 30);
+		//formToolkit.adapt(btnEmptyContainer_1, true, true);
+		
+		Button btnHopperStop_1 = new Button(shell, SWT.NONE);
+		btnHopperStop_1.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+									
+				if(objCRD == null)
+					objCRD = new TokenDispenser();
+				
+				//txtResponse.setText("");
+				
+				objRes = objCRD.Stop1();
+				txtResponse.append("Hopper 1 Stop Res:- "+objRes.res+"\r\n");
+				txtResponse.append(objRes.resDesc+"\r\n");
+									
+			}
+		});
+		btnHopperStop_1.setText("Hopper1 Stop");
+		//btnHopperStop_1.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnHopperStop_1.setBounds(294, 126, 136, 30);
+		//formToolkit.adapt(btnHopperStop_1, true, true);
+		
+		Button btnDebugContainer = new Button(shell, SWT.NONE);
+		btnDebugContainer.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+					
+				if(objCRD == null)
+					objCRD = new TokenDispenser();
+				
+				//txtResponse.setText("");
+				
+				objRes = objCRD.DebugContainer1();
+				txtResponse.append("Debug 1 Container Res:- "+objRes.res+"\r\n");
+				txtResponse.append(objRes.resDesc+"\r\n");
+					
+			}
+		});
+		btnDebugContainer.setText("Debug Container1");
+		//btnDebugContainer.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnDebugContainer.setBounds(439, 126, 149, 30);
+		//formToolkit.adapt(btnDebugContainer, true, true);
+		
+		Button btnDebugContainer_1 = new Button(shell, SWT.NONE);
+		btnDebugContainer_1.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+									
+				if(objCRD == null)
+					objCRD = new TokenDispenser();
+				
+				//txtResponse.setText("");
+				
+				objRes = objCRD.DebugContainer2();
+				txtResponse.append("Debug 2 Container Res:- "+objRes.res+"\r\n");
+				txtResponse.append(objRes.resDesc+"\r\n");
+									
+			}
+		});
+		btnDebugContainer_1.setText("Debug Container2");
+		//btnDebugContainer_1.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnDebugContainer_1.setBounds(439, 174, 149, 30);
+		//formToolkit.adapt(btnDebugContainer_1, true, true);
+		
+		Button btnLivePacket = new Button(shell, SWT.NONE);
+		btnLivePacket.addSelectionListener(new SelectionAdapter() {
+
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+									
+				if(objCRD == null)
+					objCRD = new TokenDispenser();
+				
+				//txtResponse.setText("");
+				
+				objRes = objCRD.livepacket();
+				txtResponse.append("Live Packet Response:- "+objRes.res+"\r\n");
+									
+			}
+		
+		});
+		btnLivePacket.setText("Live Packet");
+		//btnLivePacket.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnLivePacket.setBounds(10, 126, 147, 30);
+		//formToolkit.adapt(btnLivePacket, true, true);
+		
+		Button btnInitializeDevice = new Button(shell, SWT.NONE);
+		btnInitializeDevice.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				/*lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();*/
+									
+									if(objCRD == null)
+										objCRD = new TokenDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.Initialize();//str);
+									
+									
+									txtResponse.append(objRes.res+"\r\n");
+									
+								/*}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}*/
+			}
+		});
+		btnInitializeDevice.setText("Initialize Device");
+		//btnInitializeDevice.setForeground(SWTResourceManager.getColor(SWT.COLOR_BLACK));
+		//btnInitializeDevice.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnInitializeDevice.setBounds(10, 79, 146, 30);
+		//formToolkit.adapt(btnInitializeDevice, true, true);
+		
+		Button btnDispence = new Button(shell, SWT.NONE);
+		btnDispence.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+					
+				try 
+				{
+					
+						if(objCRD == null)
+							objCRD = new TokenDispenser();
+						
+						objRes = objCRD.Dispence(txtNoOfToken.getText().toString(),txtRechargeAmount.getText().toString());
+						txtResponse.append("Dispence Response:- "+objRes.res+"\r\n");
+						//txtResponse.append(objRes.resDesc+"\r\n");
+						
+				} 
+				catch (NumberFormatException e1)
+				{
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} 
+
+			}
+		});
+		btnDispence.setText("DispenceToken");
+		//btnDispence.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnDispence.setBounds(294, 257, 136, 30);
+		
+		// Interface selection functioning
+		cmbInterfaceType.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				//txtResponse.setText(cmbInterfaceType.getText());
+				switch(cmbInterfaceType.getText())
+				{
+					case "Serial":
+					{
+						cmbCOMPort.removeAll();
+						cmbCOMPort.add("Select");
+						
+						String[] strPortNames = SerialPortList.getPortNames();
+						
+						for(int iIndex = 0; iIndex < strPortNames.length; iIndex++)
+						{
+							cmbCOMPort.add(strPortNames[iIndex]);
+						}
+						
+						/*Enumeration port_list = CommPortIdentifier.getPortIdentifiers(); 
+						//Enumeration generates a series of elements, one at a time.
+						while (port_list.hasMoreElements()) //Tests if enumeration contains more elements
+						{
+							CommPortIdentifier port_id = (CommPortIdentifier)port_list.nextElement();
+							if (port_id.getPortType() == CommPortIdentifier.PORT_SERIAL)
+							{
+								cmbCOMPort.add(port_id.getName());
+								System.out.println ("Serial port: " + port_id.getName());
+							}							
+						}*/
+						
+						lblComPort.setVisible(true);
+						cmbCOMPort.setVisible(true);
+						cmbCOMPort.select(0);
+						
+						lblBaudRate.setVisible(true);
+						cmbBaudRate.setVisible(true);
+						cmbBaudRate.select(0);
+					}
+					break;
+					case "Parallel":
+					{
+						cmbCOMPort.removeAll();
+						cmbCOMPort.add("Select");
+						
+						/*Enumeration port_list = CommPortIdentifier.getPortIdentifiers(); 
+						//Enumeration generates a series of elements, one at a time.
+						while (port_list.hasMoreElements()) //Tests if enumeration contains more elements
+						{
+							CommPortIdentifier port_id = (CommPortIdentifier)port_list.nextElement();
+							if (port_id.getPortType() == CommPortIdentifier.PORT_PARALLEL)
+							{
+								cmbCOMPort.add(port_id.getName());
+								System.out.println ("Parallel port: " + port_id.getName());
+							}							
+						}*/
+						
+						lblComPort.setVisible(true);
+						cmbCOMPort.setVisible(true);
+						cmbCOMPort.select(0);
+						
+						//lblComPort.setVisible(false);
+						//cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+					default:
+					{
+						lblComPort.setVisible(false);
+						cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+				}				
+			}
+		});
+		
+		Button btnAskversion = new Button(shell, SWT.NONE);
+		btnAskversion.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				
+									
+					if(objCRD == null)
+						objCRD = new TokenDispenser();
+					
+					//txtResponse.setText("");
+					
+					objRes = objCRD.GetVersion();
+					txtResponse.append("AskVersion Response:- "+objRes.res+"\r\n");
+									
+			}
+		});
+		btnAskversion.setText("Get Version");
+		//btnAskversion.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnAskversion.setBounds(162, 79, 126, 30);
+		
+		Button btnD = new Button(shell, SWT.NONE);
+		btnD.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				if(objCRD == null)
+					objCRD = new TokenDispenser();
+				
+				//txtResponse.setText("");
+				
+				objRes = objCRD.DeInit();
+				txtResponse.append(objRes.res+"\r\n");
+			}
+		});
+		btnD.setText("Deinitilize Device");
+		btnD.setBounds(439, 79, 149, 30);
+		
+		txtNoOfToken = new Text(shell, SWT.BORDER);
+		txtNoOfToken.setToolTipText("No of Token to Dispense");
+		txtNoOfToken.setBounds(10, 258, 147, 29);
+		
+		txtRechargeAmount = new Text(shell, SWT.BORDER);
+		txtRechargeAmount.setToolTipText("Recharge Amount on Token");
+		txtRechargeAmount.setBounds(163, 258, 121, 29);
+		
+		Button btnReadtoken = new Button(shell, SWT.NONE);
+		btnReadtoken.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				if(objCRD == null)
+					objCRD = new TokenDispenser();
+				objRes = objCRD.ReadTokenData();
+				txtResponse.append("Read Toen Res:- "+objRes.res+"\r\n");
+			}
+		});
+		btnReadtoken.setText("ReadToken");
+		btnReadtoken.setBounds(439, 257, 136, 30);
+		
+		Button btnEmptyBoth = new Button(shell, SWT.NONE);
+		btnEmptyBoth.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				   
+				
+				try 
+				{
+
+					if(objCRD == null)
+						objCRD = new TokenDispenser();
+					
+					//txtResponse.setText("");
+					
+					objRes = objCRD.EmptyBothContainer();
+					
+					txtResponse.append("Empty Both Container Res:- "+objRes.res+"\r\n");
+					//txtResponse.append(objRes.res+"\r\n");
+						
+					
+				} 
+				catch (NumberFormatException e1)
+				{
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} 
+		
+				
+			}
+		});
+		btnEmptyBoth.setText("Empty BothContainer");
+		btnEmptyBoth.setGrayed(true);
+		btnEmptyBoth.setBounds(163, 222, 172, 30);
+		shell.setTabList(new Control[]{cmbInterfaceType, cmbCOMPort, cmbBaudRate, btnClear, txtResponse});
+		
+		// Clear button functioning
+		btnClear.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					txtResponse.setText("");
+				}
+				catch(Exception e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+	}
+
+	
+}
+

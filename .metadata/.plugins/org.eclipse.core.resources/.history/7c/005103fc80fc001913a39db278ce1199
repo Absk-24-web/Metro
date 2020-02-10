@@ -1,0 +1,2140 @@
+
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.List;
+import java.util.Vector;
+
+import javax.print.attribute.IntegerSyntax;
+
+import com.jxfs.control.IJxfsBaseControl;
+import com.jxfs.control.cdr.IJxfsCDRConst;
+import com.jxfs.control.cdr.JxfsATM;
+import com.jxfs.control.cdr.JxfsCashInOrder;
+import com.jxfs.control.cdr.JxfsCurrency;
+import com.jxfs.control.cdr.JxfsCurrencyCode;
+import com.jxfs.control.cdr.JxfsDenomination;
+import com.jxfs.control.cdr.JxfsDenominationItem;
+import com.jxfs.control.cdr.JxfsDeviceStatus;
+import com.jxfs.control.cdr.JxfsDispenseRequest;
+import com.jxfs.events.IJxfsIntermediateListener;
+import com.jxfs.events.JxfsException;
+import com.jxfs.events.JxfsIntermediateEvent;
+import com.jxfs.events.JxfsOperationCompleteEvent;
+import com.jxfs.general.IJxfsConst;
+import com.jxfs.general.JxfsDeviceManager;
+import com.jxfs.general.JxfsRemoteDeviceInformation;
+import com.mei.bnr.Bnr;
+import com.mei.bnr.adapter.list.StatusEventIdListAdapter;
+import com.mei.bnr.cashunit.IDenomination;
+import com.mei.bnr.cashunit.IDenominationInfo;
+import com.mei.bnr.cashunit.IDenominationItem;
+import com.mei.bnr.enums.IntermediateStackerStatus;
+import com.mei.bnr.enums.SafeDoorStatus;
+import com.mei.bnr.enums.ShutterStatus;
+import com.mei.bnr.enums.TransportStatus;
+import com.mei.bnr.exception.BnrException;
+import com.mei.bnr.history.IBillAcceptanceHistory;
+import com.mei.bnr.jxfs.device.DeviceType;
+import com.mei.bnr.jxfs.device.IDevice;
+import com.mei.bnr.jxfs.device.IDeviceProvider;
+import com.mei.bnr.jxfs.device.MEIModuleIdentification;
+import com.mei.bnr.jxfs.device.IIdentification.ModuleIdentificationEnum;
+import com.mei.bnr.jxfs.device.state.MEIModuleStatus;
+import com.mei.bnr.jxfs.drivers.BnrUsbDriver;
+import com.mei.bnr.jxfs.drivers.BnrUsbDriver.BnrUsbDevice;
+import com.mei.bnr.jxfs.service.BnrJxfsException;
+import com.mei.bnr.jxfs.service.BnrService;
+import com.mei.bnr.jxfs.service.IDirectIOConsts;
+import com.mei.bnr.jxfs.service.SpecificDeviceManager;
+import com.mei.bnr.jxfs.service.data.MEIBnrStatus;
+import com.mei.bnr.jxfs.service.data.MEICashInOrder;
+import com.mei.bnr.jxfs.service.data.MEICashUnit;
+import com.mei.bnr.jxfs.service.jobs.queryupdate.UpdateDenominationsJob;
+import com.mei.bnr.jxfs.util.ISynchronousOperation;
+import com.mei.bnr.jxfs.util.MEIJxfsException;
+import com.mei.bnr.jxfs.util.SynchronousJxfsOperationHelper;
+import com.mei.bnr.jxfs.xmlrpc.parameters.DirectIOModuleIdParameter;
+import com.mei.bnr.jxfs.xmlrpc.parameters.DirectIOModuleSetIdentificationParameters;
+import com.mei.bnr.state.IStatus;
+import com.mei.bnr.state.IStatusEventId;
+
+
+import com.mei.bnr.event.handlers.StatusEventHandler;
+import jssc.SerialPort;
+import jssc.SerialPortException;
+import jssc.SerialPortTimeoutException;
+import com.mei.bnr.event.*;
+
+
+public class BNRCD 
+{
+
+	
+	
+  public static int g_DeviceType = 0;
+  public final static long CASH_IN_AMOUNT = 1000;
+  public final static String CASH_IN_CURRENCY = "INR";
+  public final static int EXPONENT = -2;  
+  public static JxfsATM control;  
+  public static SynchronousJxfsOperationHelper helper;  
+  private static SerialPort serialPort = null;
+  public static Thread thCoinAccept = null;		
+  private static boolean StartCoinAccept = false;
+  public Bnr objBnr=new Bnr();
+  public static StatusEventHandler    statusChanged;
+  public static Boolean isCoinEscrowConnected=false;
+  public static int g_5Notes = 0;
+  public static int g_10Notes = 0;
+  public static int g_20Notes = 0;
+  public static int g_50Notes = 0;
+  public static int g_100Notes = 0;
+  public static int g_200Notes = 0;
+  public static int g_500Notes = 0;
+  public static int g_1000Notes = 0;
+  public static int g_2000Notes = 0;
+  public static int g_5Coin = 0;
+  public static int g_10Coin = 0;
+  public static int g_2Coin = 0;
+  public static int g_1Coin = 0;
+  public static Boolean isStartStopNoteAccept=false;
+  public static Thread thNoteAccept = null;	
+  
+  /****************************************************************************
+   * initializeBnrController
+   ***************************************************************************/
+  /**
+   * Initialize control and helper to use jxfs actions. 
+   * 
+   ***************************************************************************/
+  public int ConnectDevice(int PortID1,int PortID2,int PortID3,int DeviceType,int EscrowCleareanceMode,int timeout) 
+  {
+	  	
+	    try 
+	    {
+	    	
+	    	List<IDenominationInfo> objList=new ArrayList<IDenominationInfo>();
+	    	objList.add(100);
+	    	objBnr.Upda
+	    	
+	    	if(DeviceType == 1)
+	    	{
+	    		g_DeviceType = DeviceType;
+	    		
+		    	if(PortID1 != 51)
+		    		return 25; // Port does not exist
+		    	
+		    	
+				IDeviceProvider driver = null;
+				
+				String deviceName = null;    
+				   
+				driver = BnrUsbDriver.getInstance();
+				
+				try 
+				{
+					 Thread.sleep(1000);
+				} 
+				catch (InterruptedException e) 
+				{
+					e.printStackTrace();
+				}
+		
+				deviceName = getDeviceNameFromBnrUsbDriver();
+				
+				initControl(driver, deviceName);
+				
+				subscribeEvents();
+				
+				control.open();    
+			    
+			    getSetDateTime();
+			    
+			    makeBnrOperational(EscrowCleareanceMode);
+			    
+			   // statusChanged = new StatusEventHandler(Bnr.statusEvents);
+			   // statusChanged.getStatus();
+	    	}
+	    	else if(DeviceType == 2)
+	    	{
+	    		try
+	    		{
+
+	    			   serialPort = new SerialPort("/dev/ttyACM0");
+	    		        if(serialPort != null)
+	    		        {
+	    					// opening port
+	    		            if(serialPort.openPort() == true)
+	    		            {
+	    			            serialPort.setParams(SerialPort.BAUDRATE_19200, 	//SerialPort.BAUDRATE_9600,
+	    			                                 SerialPort.DATABITS_8,
+	    			                                 SerialPort.STOPBITS_1,
+	    			                                 SerialPort.PARITY_NONE);
+	    		            }
+	    		       
+	    			
+	    			if(GetControllerVersion().toLowerCase().contains("lipi cdc"))
+	    			{
+	    					 String strStatus = "";
+	    			        //Initialization of Coin Acceptor
+	    			        byte[] byResponse = null;
+	    					
+	    			        byte[] byCmd = new byte [] { 0x1B, 0x01, 0x04, 0x06, 0x08 };  //Initialization of Coin Acceptor					
+	    					
+	    					if(serialPort.writeBytes(byCmd))
+	    					{
+	    						Thread.sleep(15000);
+	    						byte[] byRes1 = serialPort.readBytes(1, 5000);
+	    						
+	    						int iPendingDataLen = byRes1[0];
+	    						
+	    						byte[] byRes2 = serialPort.readBytes(iPendingDataLen, 5000);
+	    						
+	    						byResponse = new byte[byRes1.length + byRes2.length];
+	    						System.arraycopy(byRes1, 0, byResponse, 0, byRes1.length);
+	    						System.arraycopy(byRes2, 0, byResponse, byRes1.length, byRes2.length);
+	    						
+	    						
+	    						byte[] byRes3 = new byte[byResponse.length - 2];
+	    						
+	    						System.arraycopy(byResponse, 1, byRes3, 0, byResponse.length - 2);
+	    						isCoinEscrowConnected=true;
+	    						try 
+	    						{
+	    							strStatus = new String(byRes3, "UTF-8");
+	    						  /*  objCRDResponse.strCoinInitStatus="Init Coin Acceptor:- " + strStatus;*/
+	    						} 
+	    						catch (UnsupportedEncodingException e) 
+	    						{
+	    							
+	    						}
+	    						
+	    						if(strStatus.contains("OK"))
+	    						{							 
+	    							//thCoinAccept  = new Thread(new CoinAcceptThread ());
+	    							//thCoinAccept.start();
+	    							return 0;
+	    							
+	    						}
+	    						else
+	    						{
+	    							return 22;
+	    						}
+	    					}
+	    				 
+	    			   }
+	    		
+	    		        }
+	    		        else
+	    		        {
+	    		        	return 26;
+	    		        }
+	    		
+	    		}
+	    		catch (Exception e)
+                {
+					return 31;
+				}
+	    		
+	    		g_DeviceType = DeviceType;
+	    	}
+		} 
+	    catch (Exception e)
+	    {			
+	    	if(g_DeviceType == 1)
+	    	{
+	    		e.printStackTrace();
+	    		System.out.println(e.getMessage());
+	    		return 28;
+	    	}
+	    	else if(g_DeviceType == 2)
+	    	{
+	    		isCoinEscrowConnected=false;
+	    		return 29;	    		
+	    	}
+	    	else
+	    	{
+	    		return 31;
+	    	}
+		}    
+	    return 0;
+  }
+  
+  
+  private String GetControllerVersion()
+  {
+		String strControllerVersion = "";
+		if(serialPort != null)
+		{
+			byte[] byResponse = null;
+			
+	        byte[] byCmd = new byte [] {0x1B, 0x1D, 0x49, 0x01, 0x02 };  //Send Version of Controller					
+			
+			try
+			{
+				if(serialPort.writeBytes(byCmd))
+				{
+					byte[] byRes1 = serialPort.readBytes(1, 50000);
+					
+					int iPendingDataLen = byRes1[0];
+					
+					byte[] byRes2 = serialPort.readBytes(iPendingDataLen, 5000);
+					
+					byResponse = new byte[byRes1.length + byRes2.length];				
+										
+					System.arraycopy(byRes1, 0, byResponse, 0, byRes1.length);
+					System.arraycopy(byRes2, 0, byResponse, byRes1.length, byRes2.length);
+					
+					byte[] byRes3 = new byte[byResponse.length - 2];
+					
+					System.arraycopy(byResponse, 1, byRes3, 0, byResponse.length - 2);
+					
+					try 
+					{
+						strControllerVersion = new String(byRes3, "UTF-8");
+						//System.out.println("Controller Version - " + strControllerVersion);
+						
+					} 
+					catch (UnsupportedEncodingException e) 
+					{
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}					
+				 }
+			} 
+			catch (SerialPortException e) 
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (SerialPortTimeoutException e) 
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		 return strControllerVersion;
+	
+}
+
+public boolean Reset() 
+  {	 
+	  	boolean bRet=false;
+	    try 
+	    {
+	    	resetBnr(); 
+			bRet = true;
+		} 
+	    catch (Exception e)
+	    {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			bRet=false;
+		}    
+	    return bRet;
+  }
+  
+  public String GetNativeLibVersion()
+  {
+	  return "01.00.00";
+  }
+  
+  private String  getDeviceNameFromBnrUsbDriver()
+  {
+	  String deviceName = null;
+	  IDevice device = null;
+	  
+	  BnrUsbDriver bnrUsbDriver = BnrUsbDriver.getInstance();
+	  
+	  if (isContainsDeviceNames(bnrUsbDriver)) 
+	  {
+	  	deviceName = getDeviceName(bnrUsbDriver);
+	  	device = bnrUsbDriver.getByName(deviceName);
+	  }
+	
+	  if (isBnrNotConnected(device))
+	  {
+	  	System.err.println("No device found or device not a BNR");
+	  	throw new IllegalStateException();
+	  }//if
+	  return deviceName;
+  }
+  
+  
+  public  String GetCurrencyDevFWVersion(int CurrencyType)
+  {
+	  if(CurrencyType == 1)
+	  {    
+		
+		    return "01.00.00";
+	  }
+	  else if(CurrencyType == 2)
+	  {
+		  return "01.00.00";
+	  }
+	  
+	  return "00.00.00";
+	  
+  }//getDeviceNameFromBnrUsbDriver
+  
+  public int IsNoteRemoved(int iTimeout)
+  {
+	  try {
+		IStatus bnrStatus = null;
+		  bnrStatus = objBnr.getStatus();  			
+		  if(bnrStatus.getShutterStatus() == ShutterStatus.OPEN)
+		    {
+		    	return 1;			
+		    }
+		  else if(bnrStatus.getShutterStatus() == ShutterStatus.CLOSED)
+		    {
+		    	return 0;			
+		    }
+		  else
+		  {
+			  return 31;
+		  }
+	} catch (BnrException e) 
+	  {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+		return 28;			
+	}
+  }
+  
+  
+  byte[] DeviceStatus(int DeviceType, int Timeout)
+  {
+	  byte[] byReturnValue = new byte[12];
+	  IStatus bnrStatus = null;
+	  
+	   int i=0;
+		  try 
+		  {			  
+			    bnrStatus = objBnr.getStatus();  			
+			    switch (DeviceType) {
+				case 0:
+					  if(bnrStatus.getDeviceStatus() == com.mei.bnr.enums.DeviceStatus.ONLINE)
+					    {
+					    	byReturnValue[0] = 0;  //Operation Successful			    	
+					    	
+					    	byReturnValue[1] = 0x00;  //Communication Status (Ready)			    	
+					    	
+					    	byReturnValue[1] = (byte)(byReturnValue[1] | 0x00); //Readyness			
+					    }
+					    else
+						 {
+					    	byReturnValue[0] = 28;  //Communication Failure			    	
+					    	
+					    	byReturnValue[1] = 0x01;  //Communication Status (Not Ready)			    	
+					    	
+					    	byReturnValue[1] = (byte)(byReturnValue[1] | 0x02); //(Not Ready)		
+					    }
+					    
+					    
+					    if(isCoinEscrowConnected)
+					    {
+					    	byReturnValue[0] = 0;  //Operation Successful			    	
+					    	
+					    	byReturnValue[2] = 0x00;  //Communication Status (Ready)			    	
+					    	
+					    	byReturnValue[2] = (byte)(byReturnValue[2] | 0x00); //Readyness			    	 	
+					    }
+					    else
+					    {
+					    	byReturnValue[0] = 28;  //Failure			    	
+					    	
+					    	byReturnValue[2] = 0x01;  //Communication Status ( Not Ready)			    	
+					    	
+					    	byReturnValue[2] = (byte)(byReturnValue[2] | 0x02); //Not Ready	
+					    }
+					    
+					    
+					break;
+				case 1:
+				    if(bnrStatus.getDeviceStatus() == com.mei.bnr.enums.DeviceStatus.ONLINE)
+				    {
+				    	byReturnValue[0] = 0;  //Operation Successful			    	
+				    	
+				    	byReturnValue[1] = 0x00;  //Communication Status (Ready)			    	
+				    	
+				    	byReturnValue[1] = (byte)(byReturnValue[1] | 0x00); //Readyness			
+				    }
+				    else
+					 {
+				    	byReturnValue[0] = 28;  //Communication Failure			    	
+				    	
+				    	byReturnValue[1] = 0x01;  //Communication Status (Not Ready)			    	
+				    	
+				    	byReturnValue[1] = (byte)(byReturnValue[1] | 0x02); //(Not Ready)		
+				    }
+					break;
+				case 2:
+					  if(isCoinEscrowConnected)
+					    {
+					    	byReturnValue[0] = 0;  //Operation Successful			    	
+					    	
+					    	byReturnValue[2] = 0x00;  //Communication Status (Ready)			    	
+					    	
+					    	byReturnValue[2] = (byte)(byReturnValue[2] | 0x00); //Readyness			    	 	
+					    }
+					    else
+					    {
+					    	byReturnValue[0] = 28;  //Failure			    	
+					    	
+					    	byReturnValue[2] = 0x01;  //Communication Status ( Not Ready)			    	
+					    	
+					    	byReturnValue[2] = (byte)(byReturnValue[2] | 0x02); //Not Ready	
+					    }
+					break;
+
+				default:
+					break;
+				}
+			  
+			    
+			    	 if(bnrStatus.getSafeDoorStatus() == SafeDoorStatus.LOCKED)
+			    		 byReturnValue[1] = (byte)(byReturnValue[1] | 0x40);  //Closed
+			    	 else
+			    		 byReturnValue[1] = (byte)(byReturnValue[1] | 0x04); //Opened
+			    	 
+			    	 if(bnrStatus.getIntermediateStackerStatus() == IntermediateStackerStatus.EMPTY)
+			    		 byReturnValue[1] = (byte)(byReturnValue[1] | 0x00);  //Escrow Empty
+			    	 else
+			    		 byReturnValue[1] = (byte)(byReturnValue[1] | 0x08); //Escrow Not Empty
+			    	 
+			    	 byReturnValue[1] = (byte)(byReturnValue[1] | 0x10); //Collection Box Status (Not Full) 
+			    	 
+			    	 byReturnValue[1] = (byte)(byReturnValue[1] | 0x00); //Insertion Slot Status
+			    	 
+			    	 if(bnrStatus.getTransportStatus() == TransportStatus.OK)
+			    		 byReturnValue[1] = (byte)(byReturnValue[1] | 0x00); //Transport Status
+			    	 
+			    	 byReturnValue[1] = (byte)(byReturnValue[1] | 0x00); //RFU
+				    	// if(bnrStatus.getSafeDoorStatus() == SafeDoorStatus.LOCKED)
+			    	 byReturnValue[2] = (byte)(byReturnValue[2] | 0x40);  //Closed
+			        	// else
+			    	 //	 byReturnValue[1] = (byte)(byReturnValue[1] | 0x04); //Opened
+			    	 // if(bnrStatus.getIntermediateStackerStatus() == IntermediateStackerStatus.EMPTY)
+			    	 byReturnValue[2] = (byte)(byReturnValue[2] | 0x00);  //Escrow Empty
+			    	 //else
+			    	 //	 byReturnValue[1] = (byte)(byReturnValue[1] | 0x08); //Escrow Not Empty
+			    	 byReturnValue[2] = (byte)(byReturnValue[2] | 0x10); //Collection Box Status (Not Full) 
+			    	 byReturnValue[2] = (byte)(byReturnValue[2] | 0x00); //Insertion Slot Status
+			    	 // if(bnrStatus.getTransportStatus() == TransportStatus.OK)
+			    	 byReturnValue[2] = (byte)(byReturnValue[2] | 0x00); //Transport Status
+			    	 byReturnValue[2] = (byte)(byReturnValue[2] | 0x00); //RFU
+			    	 
+			    	 byte by_5notes = (byte)g_5Notes;
+			    	 byte by_10notes = (byte)g_10Notes;
+			    	 
+			    	 byReturnValue[3] = by_10notes;
+			    	 byReturnValue[3] <<= 4;
+			    	 byReturnValue[3] = (byte)(byReturnValue[3] | by_5notes);
+			    	
+			    	 byte by_20notes = (byte)g_20Notes;
+			    	 byte by_50notes = (byte)g_50Notes;
+			    	 
+			    	 byReturnValue[4] = by_50notes;
+			    	 byReturnValue[4] <<= 4;
+			    	 byReturnValue[4] = (byte)(byReturnValue[4] | by_20notes);
+			    			 
+			    	 byte by_100notes = (byte)g_100Notes;
+			    	 byte by_200notes = (byte)g_200Notes;
+			    	 
+			    	 byReturnValue[5] = by_200notes;
+			    	 byReturnValue[5] <<= 4;
+			    	 byReturnValue[5] = (byte)(byReturnValue[5] | by_100notes);
+			    	 
+			    	 byte by_500notes = (byte)g_500Notes;
+			    	 byte by_1000notes = (byte)g_1000Notes;
+			    	 
+			    	 byReturnValue[6] = by_1000notes;
+			    	 byReturnValue[6] <<= 4;
+			    	 byReturnValue[6] = (byte)(byReturnValue[6] | by_500notes);
+			    	 
+			    	 byte by_2000notes = (byte)g_2000Notes;
+			    	 byReturnValue[7] = by_2000notes;
+			    	
+			    	 byte by_RFU1 = (byte)0;
+			    	 byte by_RFU2 = (byte)0;
+			    	 
+			    	 byReturnValue[9] = by_RFU2;
+			    	 byReturnValue[9] <<= 4;
+			    	 byReturnValue[9] = (byte)(byReturnValue[9] | by_RFU1);
+			    	
+			    	 byte by_5Coins = (byte)g_5Coin;
+			    	 byte by_10Coins = (byte)g_10Coin;
+			    	 
+			    	 byReturnValue[10] = by_10Coins;
+			    	 byReturnValue[10] <<= 4;
+			    	 byReturnValue[10] = (byte)(byReturnValue[10] | by_5Coins);		    			 
+			    			    	 
+			    	 byte by_RFU3 = (byte)0;
+			    	 byte by_RFU4 = (byte)0;
+			    	 
+			    	 byReturnValue[11] = by_RFU4;
+			    	 byReturnValue[11] <<= 4;
+			    	 byReturnValue[11] = (byte)(byReturnValue[11] | by_RFU3);
+	
+			    }	 
+		  catch (Exception e)
+		  {
+		  }
+	  return byReturnValue;
+  }
+  
+  public long  GetValidCurrency(int CurrencyType,long Denom,int timeout)
+  {
+	  	
+	  	if(CurrencyType == 1)
+	  	{
+		  	MEICashInOrder data = null;
+			long insertedAmount = 0;  
+			
+		    try 
+		    {
+				startCashInTransaction();
+				
+				//while ((insertedAmount != amount) && !hasChange) {
+				  //System.out.println("Please insert " + CASH_IN_AMOUNT + " " + CASH_IN_CURRENCY + ".");    
+				  data = cashIn(Denom, "INR");
+				  insertedAmount = data.getDenomination().getAmount();      
+				  
+				  // Check if change needed
+				  if (insertedAmount/100 != Denom) 
+				  {
+					  cashInRollback();
+					  insertedAmount = 0;
+				  }
+				  
+				  int amount=(int) (insertedAmount/100);
+				  switch(amount)
+				  {
+				     case 5:		  g_5Notes++;
+				    	 break;
+				     case 10:		  g_10Notes++;
+				    	 break;
+				     case 20:		  g_20Notes++;
+				    	 break;
+				     case 50:		  g_50Notes++;
+				    	 break;
+				     case 100:		  g_100Notes++;
+				    	 break;
+				     case 200:		  g_200Notes++;
+				    	 break;
+				     case 500:		  g_500Notes++;
+				    	 break;
+				     case 1000:		  g_1000Notes++;
+				    	 break;
+				     case 2000:		  g_2000Notes++;
+				    	 break;
+				    	
+				  }
+				  				  
+				//endCashInTransaction();
+			 } catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}  
+		    if(insertedAmount > 0)
+		    	return 0;
+		    else
+		    	return 1;
+	  	}
+	  	else if(CurrencyType == 2)
+	  	{
+	  		StartCoinAccept(Denom);
+	  		return 0;
+	  	}
+		return 0;
+  }
+  
+  int AcceptCurrentCurrency(int CurrencyType,int Denom, int Timeout)
+  {
+	  if(CurrencyType == 1)
+	  {
+		  try 
+	     {
+			   g_5Notes = 0;
+			   g_10Notes = 0;
+			   g_20Notes = 0;
+			   g_50Notes = 0;
+			   g_100Notes = 0;
+			   g_200Notes = 0;
+			   g_500Notes = 0;
+			   g_1000Notes = 0;
+			   g_2000Notes = 0;
+			  
+			helper.run(new ISynchronousOperation()
+			{
+				public int run(JxfsATM control) throws JxfsException
+				{
+					control.cashInEnd();
+					return 0;
+				}//run
+			});
+		} 
+	     catch (Exception e) 
+	     {
+			e.printStackTrace();
+			return 1;
+		 }
+	  }
+	  else if(CurrencyType == 2)
+	  {
+		  
+		  try
+		  {
+			byte[] status = new byte[]{ 0x1B, 0x33, 0x36, 0x39, 0x42 };
+			     
+			  serialPort.writeBytes(status);
+			  Thread.sleep(1000);
+   
+			 String s=serialPort.readHexString();
+			  
+			  return 0;
+		}
+		  catch (Exception e)
+		  {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		
+	  }
+	  return 1;
+  }
+  
+  
+  public int StackAcceptedCurrencies(int Timeout)
+  {
+		  try 
+	     {
+			   g_5Notes = 0;
+			   g_10Notes = 0;
+			   g_20Notes = 0;
+			   g_50Notes = 0;
+			   g_100Notes = 0;
+			   g_200Notes = 0;
+			   g_500Notes = 0;
+			   g_1000Notes = 0;
+			   g_2000Notes = 0;
+			helper.run(new ISynchronousOperation()
+			{
+				public int run(JxfsATM control) throws JxfsException
+				{
+				     return control.cashInEnd();
+				}//run
+			});
+		} 
+	     catch (Exception e) 
+	     {
+			e.printStackTrace();
+			return 28;
+		 }
+	  
+
+	  return 0;
+  
+  }
+  
+  
+  
+  int ReturnCurrentCurrency(int CurrencyType,int Timeout)
+  {
+	   if(CurrencyType == 1)
+	   {
+		  	try 
+		    {
+		  		  g_5Notes = 0;
+				   g_10Notes = 0;
+				   g_20Notes = 0;
+				   g_50Notes = 0;
+				   g_100Notes = 0;
+				   g_200Notes = 0;
+				   g_500Notes = 0;
+				   g_1000Notes = 0;
+				   g_2000Notes = 0;
+				// Retrieve the operationCompleteEvent
+				helper.run(new ISynchronousOperation() 
+				{
+				  public int run(JxfsATM control) throws JxfsException 
+				  {
+					  control.cashInRollback();
+					  return 0;
+				  }//run
+				});
+			}
+		    catch (Exception e) 
+		    {
+				e.printStackTrace();
+				return 1;
+			}
+	   }
+	   else if(CurrencyType == 2)  //COIN
+	   {
+		   
+		   try
+		   {
+			byte[] status = new byte[]{ 0x1B, 0x32, 0x38, 0x39, 0x40 };
+			     
+			   serialPort.writeBytes(status);
+			   Thread.sleep(1000);
+			    String s=serialPort.readHexString();
+
+			   return 0;
+		 }
+		   catch (Exception e) 
+		   {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	   }
+	   return 1;
+  }
+  
+  
+  public int CoinAccept()
+  {
+	  return 0;
+  }
+  
+  
+  public int  StackAceptedCurrencies(int Timeout)
+  {
+	  	
+		  	MEICashInOrder data = null;
+			long insertedAmount = 0;  
+			
+		    try 
+		    {
+				  startCashInTransaction();
+				
+				  //while ((insertedAmount != amount) && !hasChange) {
+				  //System.out.println("Please insert " + CASH_IN_AMOUNT + " " + CASH_IN_CURRENCY + ".");    
+				  data = cashIn(0, "INR");
+				  insertedAmount = data.getDenomination().getAmount();      
+				 return 0;
+			 }
+		    catch (Exception e)
+		    {
+				return 1;
+			}  
+		 
+  }
+  
+  
+  
+  
+  
+  int ReturnAcceptedCurrency(int Timeout)
+  {
+	 
+	  	try 
+	    {
+			// Retrieve the operationCompleteEvent
+			helper.run(new ISynchronousOperation() 
+			{
+			  public int run(JxfsATM control) throws JxfsException 
+			  {
+				  control.cashInRollback();
+				  return 0;
+			  }//run
+			});
+		}
+	    catch (Exception e) 
+	    {
+			e.printStackTrace();
+			return 1;
+		}
+	   
+	   return 1;
+  }  
+  
+  
+  
+  public int ClearJammedCurrencies(int CurrencyType,int EscrowClearanceMode,int Timeout)
+  {
+	  if(CurrencyType==1)
+	  {
+		  if(EscrowClearanceMode==0)
+		  {
+				try 
+			    {
+					// Retrieve the operationCompleteEvent
+					helper.run(new ISynchronousOperation() 
+					{
+					  public int run(JxfsATM control) throws JxfsException 
+					  {
+						  control.cashInRollback();
+						  return 0;
+					  }//run
+					});
+				}
+			    catch (Exception e) 
+			    {
+					e.printStackTrace();
+					return 1;
+				}
+			   
+		  }
+		  else if(EscrowClearanceMode==1)
+		  {
+			  try 
+			     {
+					helper.run(new ISynchronousOperation()
+					{
+						public int run(JxfsATM control) throws JxfsException
+						{
+							control.cashInEnd();
+							return 0;
+						}//run
+					});
+				} 
+			     catch (Exception e) 
+			     {
+					e.printStackTrace();
+					return 1;
+				 }
+		  }
+	  }
+	  else if(CurrencyType==2)
+	  {
+		 if(EscrowClearanceMode==1)  // Send To Collection Bin Means Accept
+		 {
+
+			  try
+			  {
+				byte[] status = new byte[]{ 0x1B, 0x33, 0x36, 0x39, 0x42 };
+				     
+				  serialPort.writeBytes(status);
+				  Thread.sleep(1000);
+	   
+				 String s=serialPort.readHexString();
+				  
+				  return 0;
+			}
+			  catch (Exception e)
+			  {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} 
+			
+		  
+		 }
+		 else if(EscrowClearanceMode==0)  //Return The Escrowed Coin
+		 {
+
+			   try
+			   {
+				byte[] status = new byte[]{ 0x1B, 0x32, 0x38, 0x39, 0x40 };
+				     
+				   serialPort.writeBytes(status);
+				   Thread.sleep(1000);
+				    String s=serialPort.readHexString();
+
+				   return 0;
+			 }
+			   catch (Exception e) 
+			   {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		   
+		 }
+	  }
+	return 1;
+  }
+  
+  
+  public int StartCoinAccept(long Denom)
+	{
+	  StartCoinAccept=true;
+	  Boolean isCoinAccepted=false;
+	  byte[] byResponse = null;
+		
+      byte[] byCmd = new byte [] { 0x1B, 0x0A, 0x03, 0x05, 0x07 };  //Coin Accept Start					
+		
+      int iFirstRead=0;
+      
+      byte byPreviousValue = 0x00;
+      
+       while(true)
+		{
+   	   
+	    	try
+		    {					
+				if(StartCoinAccept)
+				{
+					if(serialPort.writeBytes(byCmd))
+					{							
+
+						Thread.sleep(500);
+						byResponse = serialPort.readBytes();							
+					
+						
+						if(byResponse != null &&  byResponse.length == 22)
+						{
+							 if (byResponse[11] != byPreviousValue && byResponse[12] != 0x00)
+							 {
+							 
+								switch(byResponse[12])
+								{
+									case 0x04:   //1 Coin
+									{
+										 byPreviousValue = byResponse[11];
+										 System.out.println("Rs.1 Coin Accepted");
+										 g_1Coin++;
+										 StartCoinAccept=false;// objInterfaceCoinAcceptor.CoinAcceptedEvent(1);
+									     isCoinAccepted=true;
+									}
+									break;
+									
+									case 0x02:   //2 Coin
+									{
+										byPreviousValue = byResponse[11];
+										System.out.println("Rs.2 Coin Accepted");
+										g_2Coin++;
+										StartCoinAccept=false;
+										  isCoinAccepted=true;
+										//objInterfaceCoinAcceptor.CoinAcceptedEvent(2);
+									}
+									break;
+									
+									case 0x0A:   //5 Coin
+									{
+										byPreviousValue = byResponse[11];
+										System.out.println("Rs.5 Coin Accepted");
+										g_5Coin++;
+										StartCoinAccept=false;
+										  isCoinAccepted=true;
+										//objInterfaceCoinAcceptor.CoinAcceptedEvent(5);
+									}
+									break;
+									
+									case 0x0B:   //10 Coin
+									{
+										byPreviousValue = byResponse[11];
+										System.out.println("Rs.10 Coin Accepted");
+										g_10Coin++;
+										StartCoinAccept=false;
+										  isCoinAccepted=true;
+										//objInterfaceCoinAcceptor.CoinAcceptedEvent(10);
+									}
+									break;
+									
+									case 0x08:   //5 Coin
+									{
+										byPreviousValue = byResponse[11];
+										System.out.println("Rs.5 Coin Accepted");
+										StartCoinAccept=false;
+										  isCoinAccepted=true;
+										//objInterfaceCoinAcceptor.CoinAcceptedEvent(5);
+									}
+									break;
+									
+									case 0x09:   //5 Coin
+									{
+										byPreviousValue = byResponse[11];
+										System.out.println("Rs.5 Coin Accepted");
+										g_5Coin++;
+										StartCoinAccept=false;
+										  isCoinAccepted=true;
+										//objInterfaceCoinAcceptor.CoinAcceptedEvent(5);
+									}
+									break;
+									case 0x06:   //2 Coin
+									{
+										byPreviousValue = byResponse[11];
+										System.out.println("Rs.2 Coin Accepted");
+										g_2Coin++;
+										StartCoinAccept=false;
+										  isCoinAccepted=true;
+										//objInterfaceCoinAcceptor.CoinAcceptedEvent(2);
+									}
+									break;
+								}
+							 }
+						}
+					}
+				}
+				else
+				{
+					    if(isCoinAccepted)
+					    	break;
+						Thread.sleep(1000);
+				}
+				
+		}
+		catch (SerialPortException | InterruptedException e) 
+		{
+			
+		}
+	}
+	return 0;
+		
+		//System.out.println(thCoinAccept.getState().toString());
+		//if(thCoinAccept == null)
+		//{
+			//StartCoinAccept = true;
+			//thCoinAccept  = new Thread(new CoinAcceptThread ());
+			//thCoinAccept.start();
+		//}
+		//else
+		//{
+		//	StartCoinAccept = false;
+			
+		//}
+
+	}
+  
+  
+  public void StopCoinAccept()
+	{
+		StartCoinAccept = false;
+	}
+  
+  
+  
+  /****************************************************************************
+   * isContainsDeviceNames
+   ***************************************************************************/
+  /**
+   * Checks that usb driver contains names of devices
+   * 
+   * @param bnrUsbDriver driver
+   * @return true or false, depending of name availability
+   * 
+   ***************************************************************************/ 
+  private boolean isContainsDeviceNames(BnrUsbDriver bnrUsbDriver) 
+  {
+	  return bnrUsbDriver.getDeviceNames().size() > 0 ? true : false;
+  }//isContainsDeviceNames
+
+  /****************************************************************************
+   * getDeviceName
+   ***************************************************************************/
+  /**
+   * get device name from bnrUsbDriver
+   * 
+   * @param bnrUsbDriver driver
+   * @return name of device
+   * 
+   ***************************************************************************/ 
+  private String getDeviceName(BnrUsbDriver bnrUsbDriver) 
+  {
+	  return bnrUsbDriver.getDeviceNames().iterator().next();
+  }//bnrUsbDriver
+  
+  /****************************************************************************
+   * isBnrNotConnected
+   ***************************************************************************/
+  /**
+   * Checks that Bnr device not connected
+   * 
+   * @param device that gets from usbDriver
+   * @return TRUE if Bnr NOT connected and FALSE otherwise
+   * 
+   ***************************************************************************/ 
+  private boolean isBnrNotConnected(IDevice device) 
+  {
+	    boolean deviceNotExist = (device == null) ? true : false;
+	    boolean deviceNotBnr   = (device.getDeviceType() != DeviceType.BNR) ? true : false;
+	      try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	    return deviceNotExist || deviceNotBnr;
+  }//isBnrNotConnected
+  
+  /****************************************************************************
+   * initControl
+   ***************************************************************************/
+  /**
+   * Initializes control and helper for access to bnr
+   * 
+   * @param driver for bnr
+   * @param deviceName of bnr
+   * 
+   ***************************************************************************/
+  private void initControl(IDeviceProvider driver, String deviceName) 
+  {
+	    try
+	    {      
+		      control = initializeAndGetJxfsControl(driver, deviceName);
+		      helper = new SynchronousJxfsOperationHelper(control);     	        
+	    } 
+	    catch (JxfsException e)
+	    {
+		      System.err.println("JxfsException occured in JxfsDeviceManager.initialize().");
+		      System.err.println(e.toString());
+	    } 
+	    catch (Exception e)
+	    {
+		      System.err.println("Exception occured in JxfsDeviceManager.initialize().");
+		      System.err.println(e.toString());
+	    }//try  
+  }//initControl
+ 
+  /****************************************************************************
+   * initializeAndGetJxfsControl
+   ***************************************************************************/
+  /**
+   * Initialize JxfsDeviceManager and obtain a JxfsATM Control for the
+   * device identified by the given name and driver.
+   * 
+   * @param driver for bnr
+   * @param deviceName of bnr
+   * @return a JxfsATM control.
+   * @throws JxfsException
+   *           if an error occurred.
+   * 
+   ***************************************************************************/
+  private JxfsATM initializeAndGetJxfsControl(IDeviceProvider driver, String deviceName) throws JxfsException {
+
+    try 
+    {
+		JxfsDeviceManager.getReference().initialize("com.mei.bnr.jxfs.service.SpecificDeviceManager,workstation,jxfsClient,lib");
+	} 
+    catch (Exception e)
+    {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} 
+    
+    SpecificDeviceManager.getReference().announce(
+        new JxfsRemoteDeviceInformation("workstation", driver.getClass().getName()
+            + "/" + deviceName, "", "com.jxfs.control.cdr.JxfsATM", "com.mei.bnr.jxfs.service.BnrService", "CDR-" 
+            + deviceName, "description"));
+
+    final IJxfsBaseControl control = getBaseControl(driver, deviceName);
+
+    if (!isJxfsControl(control)) 
+    {
+      System.err.println("Not a JxfsATM control.");
+      throw new IllegalStateException();
+    }//if
+    return (JxfsATM) control;
+  }//initializeAndGetJxfsControl
+ 
+  /****************************************************************************
+   * getBaseControl
+   *************************************************************************/
+  /**
+   * Returns Jxfs base conrol
+   * 
+   * @param driver for bnr
+   * @param deviceName of bnr
+   * @return a Jxfs base control.
+   * @throws JxfsException
+   *           if an error occurred.
+   * 
+   ***************************************************************************/
+  private IJxfsBaseControl getBaseControl(IDeviceProvider driver, String deviceName) throws JxfsException {
+    return JxfsDeviceManager.getReference().getDevice(driver.getClass().getName() + "/" + deviceName + "@workstation");
+  }//getBaseControl
+
+  /****************************************************************************
+   * isJxfsControl
+   ***************************************************************************/
+  /**
+   * Checks that base control is JxfsATM control
+   * 
+   * @param control base control
+   * @return true or false if JxfsConrol instance of base control
+   * 
+   ***************************************************************************/
+  private boolean isJxfsControl(IJxfsBaseControl control) {
+    return control instanceof JxfsATM ? true : false;
+  }//isJxfsControl
+ 
+  /****************************************************************************
+   * subscribeEvents
+   ***************************************************************************/
+  /**
+   * Subscribe to intermediate event, and check how much bills user
+   * inserted during cahIn operation.
+   * 
+   * 1) integrator can implement custom Observers for Bnr events and subscribe
+   *    it during app initialization. After closing Bnr, integrator should
+   *    unsubscribe from Bnr events manually (not implemented in this demo).
+   *    
+   * 2) integrator can implement custom observers on-the-fly using helper and
+   *    anonymous classes (implemented in this demo)
+   *
+   * 
+   ***************************************************************************/
+  private void subscribeEvents() {
+    control.addIntermediateListener(new IJxfsIntermediateListener() {
+
+      public void intermediateOccurred(JxfsIntermediateEvent IE) {
+        try {
+			MEICashInOrder data = (MEICashInOrder) IE.getData();
+			System.out.println("You`ve inserted: " + data.getDenomination().getAmount() + " " + CASH_IN_CURRENCY);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+		}      
+      }//intermediateOccurred
+    });    
+  }//subscribeEvents
+ 
+  /****************************************************************************
+   * getSetDateTime
+   ***************************************************************************/
+  /**
+   * An example method, how to set up date to bnr. We get current OS time,
+   * set it into bnr and print to the terminal.
+   *   
+   * @throws JxfsException 
+   *                 if an error occurred.
+   * 
+   ***************************************************************************/
+  private void getSetDateTime() throws JxfsException {
+   // System.out.println("Set Date to the BNR");
+    Date result = null;
+    
+    setCurrentDateTime();
+    result = getBnrDateTime();   
+    
+   // System.out.println("Date from the BNR: " + result);
+  }//getSetDateTime
+
+  /****************************************************************************
+   * setCurrentDateTime
+   ***************************************************************************/
+  /**
+   * Takes date from OS and, using helper, set it into the bnr
+   *   
+   * @throws JxfsException 
+   *                 if an error occurred.
+   * 
+   ***************************************************************************/
+  public void setCurrentDateTime() throws JxfsException {
+    final Date date = GregorianCalendar.getInstance().getTime();
+    
+    // Set Date Time.
+    helper.run(new ISynchronousOperation() {
+        public int run(JxfsATM control) throws JxfsException {
+          return control.setDateTime(date);
+        }//run
+      }); 
+  }//setCurrentDateTime
+ 
+  /****************************************************************************
+   * getBnrDateTime
+   ***************************************************************************/
+  /**
+   * Gets date from bnr
+   *   
+   * @return date from bnr
+   * @throws JxfsException 
+   *                 if an error occurred.
+   * 
+   ***************************************************************************/
+  public Date getBnrDateTime() throws JxfsException
+  {
+    Date result = null;
+    JxfsOperationCompleteEvent event = null;
+      
+     // Run getTime operation
+    event = helper.run(new ISynchronousOperation()
+    {
+        public int run(JxfsATM control) throws JxfsException 
+        {
+          return control.getDateTime();
+        }//run
+      });
+    
+    // Check and return result
+    if (event.getResult() == IJxfsConst.JXFS_RC_SUCCESSFUL)
+    {
+      result = (Date) event.getData();
+    } 
+    else 
+    {
+      throw new JxfsException(event.getResult());
+    }//if
+    return result;
+  }//getBnrDateTime
+ 
+  /****************************************************************************
+   * makeBnrOperational
+   ***************************************************************************/
+  /**
+   * If bnr status is offline, set it online
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void makeBnrOperational(int EscrowCleareanceMode) throws JxfsException
+  {
+    try {
+		JxfsDeviceStatus deviceStatus = getDeviceStatus();    
+
+		if (deviceStatus.isOffLine())
+		{
+			if(EscrowCleareanceMode == 1)
+				resetBnr();      
+			Thread.sleep(1000);
+		}//if    
+	} catch (InterruptedException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+  }//makeBnrOperational
+
+  /****************************************************************************
+   * getDeviceStatus
+   ***************************************************************************/
+  /**
+   * If bnr status is offline, set it online
+   * 
+   * @return device status
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  public JxfsDeviceStatus getDeviceStatus() throws JxfsException {
+    MEIBnrStatus status = null;    
+    
+    // Run get status operation
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.directIO(IDirectIOConsts.JXFS_O_MEI_CDR_GET_STATUS, null);
+      }//run
+    });
+    
+    // Check and return result
+    if (event.getResult() == IJxfsConst.JXFS_RC_SUCCESSFUL) {      
+      status = (MEIBnrStatus) event.getData();
+    } else {
+      throw new JxfsException(event.getResult());
+    }//if
+    return status.getDeviceStatus();
+  }//getDeviceStatus
+ 
+  /****************************************************************************
+   * startCashInTransaction
+   ***************************************************************************/
+  /**
+   * Reset Bnr
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void resetBnr() throws JxfsException {
+    
+    helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.reset();
+      }//run
+    });
+  }//resetBnr
+  
+
+  
+  /****************************************************************************
+   * startCashInTransaction
+   ***************************************************************************/
+  /**
+   * Start the cash in transaction with the BNR
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void startCashInTransaction() throws JxfsException
+  {
+    helper.run(new ISynchronousOperation()
+    {
+        public int run(JxfsATM control) throws JxfsException 
+        {
+          return control.cashInStart(IJxfsCDRConst.JXFS_C_CDR_POS_DEFAULT, true);
+        }//run
+      });
+  }//startCashInTransaction
+  
+  /****************************************************************************
+   * cashIn
+   ***************************************************************************/
+  /**
+   * Move inserted notes to the escrow
+   * `2
+   * @param amount required
+   * @param currencyCode required
+   * @return information about inserted notes
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private MEICashInOrder cashIn(long amount, String currencyCode) throws JxfsException 
+  {
+	  
+    MEICashInOrder result = null;
+    JxfsOperationCompleteEvent event = null;
+    final JxfsDenomination denomination = new JxfsDenomination(null, amount, 0);
+    final JxfsCurrency jxfsCurrency = new JxfsCurrency(new JxfsCurrencyCode(
+          currencyCode == null ? "" : currencyCode), 0);
+      
+    // Run cashIn operation
+       event = helper.run(new ISynchronousOperation() 
+       {
+        public int run(JxfsATM deviceControl) throws JxfsException 
+        {
+          return ((JxfsATM) deviceControl).cashIn(new JxfsCashInOrder(denomination, jxfsCurrency));
+        }//run
+      });    
+    // If the result is not successful
+    if (event.getResult() != IJxfsConst.JXFS_RC_SUCCESSFUL) 
+    {
+      throw new MEIJxfsException(event.getResult(), event.getData());
+    } 
+    else 
+    {
+      result = (MEICashInOrder) event.getData();
+    }//if
+    return result;
+  }//cashIn
+  
+  /****************************************************************************
+   * isDenominational
+   ****************************************************************************/
+  /**
+   * Check if device has enough money to change
+   * 
+   * @param amountToDenominate required
+   * @return true or false, dependable on denomination operation
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ****************************************************************************/
+  private boolean isDenominational(final long amountToDenominate) throws JxfsException {
+    final int mixNumber = IJxfsCDRConst.JXFS_C_CDR_MIX_ALGORITHM;
+    final Vector<JxfsDenominationItem> denominationItems = null;
+    
+    // Run denomination operation
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.denominate(mixNumber, new JxfsDenomination(
+            denominationItems, amountToDenominate, 0), new JxfsCurrency(
+              new JxfsCurrencyCode(CASH_IN_CURRENCY), EXPONENT));
+      }//run
+    });
+    
+    // Check result
+    if (event.getResult() == IJxfsCDRConst.JXFS_E_CDR_NOT_DISPENSABLE) {
+      return false;
+    }//if
+    return true;
+  }//isDenominational 
+  
+  /****************************************************************************
+   * cashInRollback
+   ***************************************************************************/
+  /**
+   * Roll back the cash in transaction
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  public void cashInRollback() 
+  {
+    try 
+    {
+		// Retrieve the operationCompleteEvent
+		helper.run(new ISynchronousOperation() 
+		{
+		  public int run(JxfsATM control) throws JxfsException 
+		  {
+		    return control.cashInRollback();
+		  }//run
+		});
+	}
+    catch (Exception e) 
+    {
+		e.printStackTrace();
+	}
+  }//cashInRollback
+  
+
+ 
+  /****************************************************************************
+   * hasChange
+   ***************************************************************************/
+  /**
+   * Check if bnr should give change or not
+   * 
+   * @param insertedAmount amount
+   * @return true or not, if inserted amount bigger then required
+   ***************************************************************************/
+  private boolean hasChange(long insertedAmount) {
+    return (insertedAmount - CASH_IN_AMOUNT) > 0 ? true : false;
+  }//hasChange
+ 
+  /****************************************************************************
+   * dispenseAndPresent
+   ***************************************************************************/
+  /**
+   * Dispense and give change to user
+   * 
+   * @param amountToChange required
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void dispenseAndPresent(long amountToChange) throws JxfsException {
+    System.out.println("Take your change");
+    dispense(amountToChange);
+    present();
+  }//dispenseAndPresent
+  
+  /****************************************************************************
+   * dispense
+   ***************************************************************************/
+  /**
+   * Dispenses the amount
+   * 
+   * @param amountToChange required
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void dispense(final long amountToChange) throws JxfsException {
+    final int mixNumber = IJxfsCDRConst.JXFS_C_CDR_MIX_ALGORITHM;
+    
+    // Run dispense operation
+    helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.dispense(new JxfsDispenseRequest(mixNumber,
+            new JxfsDenomination(null, amountToChange, 0),
+            new JxfsCurrency(new JxfsCurrencyCode(CASH_IN_CURRENCY), EXPONENT),
+            IJxfsCDRConst.JXFS_C_CDR_POS_DEFAULT));
+      }//run
+    });
+  }//dispense
+  
+  /****************************************************************************
+   * present
+   ***************************************************************************/
+  /**
+   * Present dispensed money
+   * 
+   * @param amountToChange
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void present() throws JxfsException {
+    
+    // Run present operation
+    helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.present();
+      }//run
+    });
+  }//present
+  
+  /*************************************************************************
+   * alertStatisticsMessage
+   ***************************************************************/
+  /**
+   * Print statistics message
+   * 
+   *************************************************************************/
+  private void alertStatisticsMessage() {
+    
+    System.out.println("\n********************************************************************");
+    System.out.println("STATISTICS");
+    System.out.println("********************************************************************\n");
+  }//alertStatisticsMessage
+  
+  /****************************************************************************
+   * observeCashUnit
+   ***************************************************************************/
+  /**
+   * Print cashUnit statistics
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void observeCashUnit() throws JxfsException {
+    
+    System.out.println("\n******************* Cash Units *******************");
+    System.out.println(queryCashUnit());
+    
+  }//observeCashUnit
+  
+  /****************************************************************************
+   * queryCashUnit
+   ***************************************************************************/
+  /**
+   * Get the complete state of all physical and logical cash units in the BNR
+   * 
+   * @return data about cashUnits
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private MEICashUnit queryCashUnit() throws JxfsException {
+    MEICashUnit resultedCashUnit = null;
+    
+    // Retrieve the operationCompleteEvent
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.queryCashUnit();
+      }//run
+
+    });
+    
+    // If the result is successful
+    if (event.getResult() == IJxfsCDRConst.JXFS_RC_SUCCESSFUL) {
+      // Retrieve the MEICashUnit object
+      resultedCashUnit = (MEICashUnit) event.getData();
+    } else {
+      throw new JxfsException(event.getResult());
+    }//if
+    return resultedCashUnit;
+  }//queryCashUnit
+  
+  /****************************************************************************
+   * observeModules
+   ***************************************************************************/
+  /**
+   * Print Modules statistics
+   * @throws JxfsException 
+   * 
+   * @throws JxfsException 
+   *                  if an error occurred.
+   ***************************************************************************/
+  private void observeModules() throws JxfsException {
+    System.out
+    .println("\n******************* Modules *******************");
+    
+    ArrayList<Integer> modules = getModules();
+    
+    for (Integer module : modules) {
+      System.out.println("Module " + ModuleIdentificationEnum.getById(module));
+      
+      MEIModuleIdentification properties = getIdentification(module);
+      
+      // Set Module Name if not Bundler or Cashbox
+      //if (!(properties.getDescription().contains("Bundler")) && !(properties.getDescription().contains("Cashbox"))) {
+        //setIdentification(module, "userInfo");
+      //}//if
+      
+      // Save User info to Module
+      System.out.println(getStatus(module));
+    }//for
+    
+  }//observeModules
+  
+  /****************************************************************************
+   * getModules
+   ***************************************************************************/
+  /**
+   * Get the list of all available modules.
+   * 
+   * @return the list of module ids or <code>null</code> if an error occurred.
+   * @throws JxfsException
+   *           if the command failed
+   * 
+   ***************************************************************************/
+  @SuppressWarnings("unchecked")
+  private ArrayList<Integer> getModules() throws JxfsException {
+    ArrayList<Integer> modules = null;
+    
+    JxfsOperationCompleteEvent eventGetModules = helper
+        .run(new ISynchronousOperation() {
+          public int run(JxfsATM control) throws JxfsException {
+            return control.directIO(
+              IDirectIOConsts.JXFS_O_MEI_CDR_GET_MODULES, null);
+          }//run
+        });
+    
+    if (eventGetModules.getResult() == IJxfsCDRConst.JXFS_RC_SUCCESSFUL) {
+      modules = (ArrayList<Integer>) eventGetModules.getData();
+    } else {
+      throw new JxfsException(eventGetModules.getResult());
+    }//if
+    return modules;
+  }//getModules
+  
+  /****************************************************************************
+   * getIdentification
+   ***************************************************************************/
+  /**
+   * Get module identification for the given module id.
+   * 
+   * @param moduleId
+   *          the given module id.
+   * @return a MEIModuleIdentification.
+   * @throws JxfsException
+   *           if the command failed
+   *
+   ***************************************************************************/
+  private MEIModuleIdentification getIdentification(final int moduleId) throws JxfsException {
+    MEIModuleIdentification moduleIdentification = null;
+    
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.directIO(
+            IDirectIOConsts.JXFS_O_MEI_CDR_MODULE_GET_IDENTIFICATION,
+            new DirectIOModuleIdParameter(moduleId));
+      }//run
+    });
+
+    if (event.getResult() == IJxfsConst.JXFS_RC_SUCCESSFUL) {
+      moduleIdentification = (MEIModuleIdentification) event.getData();
+    } else {
+      throw new JxfsException(event.getResult());
+    }//if
+
+    return moduleIdentification;
+  }//getIdentification
+  
+  /****************************************************************************
+   * setIdentification
+   ***************************************************************************/
+  /**
+   * Set the user identification of a module.
+   * 
+   * @param moduleId
+   *          the module id
+   * @param stringIdentification
+   *          the string to be written in the BNR. The maximum length is 255
+   *          characters.
+   * @throws JxfsException
+   *           if the command failed
+   * 
+   ***************************************************************************/
+  private void setIdentification(final int moduleId,
+      final String stringIdentification) throws JxfsException {
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.directIO(
+            IDirectIOConsts.JXFS_O_MEI_CDR_MODULE_SET_IDENTIFICATION,
+            new DirectIOModuleSetIdentificationParameters(moduleId,
+                stringIdentification));
+      }//run
+    });
+
+    // If the result is not successful
+    if (event.getResult() != IJxfsConst.JXFS_RC_SUCCESSFUL) {
+      throw new JxfsException(event.getResult());
+    }//if
+  }//setIdentification
+  
+  /****************************************************************************
+   * getStatus
+   ***************************************************************************/
+  /**
+   * Get the module state for the given module id.
+   * 
+   * @param moduleId
+   *          the given module id.
+   * @return a MEIModuleStatus.
+   * @throws JxfsException
+   *           if the command failed
+   ***************************************************************************/
+  private MEIModuleStatus getStatus(final int moduleId) throws JxfsException {
+    MEIModuleStatus moduleStatus = null;
+
+    // Retrieve the operationCompleteEvent
+    JxfsOperationCompleteEvent event = helper.run(new ISynchronousOperation() {
+      public int run(JxfsATM control) throws JxfsException {
+        return control.directIO(
+            IDirectIOConsts.JXFS_O_MEI_CDR_MODULE_GET_STATE,
+            new DirectIOModuleIdParameter(moduleId));
+      }//run
+    });
+
+    // If the result is successful
+    if (event.getResult() == IJxfsConst.JXFS_RC_SUCCESSFUL) {
+      // Retrieve the MEIModuleStatus object
+      moduleStatus = (MEIModuleStatus) event.getData();
+    } else {
+      throw new JxfsException(event.getResult());
+    }//if
+    return moduleStatus;
+  }//getStatus
+ 
+  /****************************************************************************
+   * disposeBnrController
+   ***************************************************************************/
+  /**
+   * Close bnrController end exit from application
+   * 
+   ***************************************************************************/
+  private void disposeBnrController() {
+    JxfsDeviceManager.getReference().shutdown();
+  }//disposeBnrController
+
+
+public boolean AcceptCurrencies(int CurrencyType,int amount,int Timeout)
+{
+	//if(thNoteAccept == null)
+	//{
+		isStartStopNoteAccept = true;
+		thNoteAccept  = new Thread(new NoteAcceptThread ());
+		thNoteAccept.start();
+	//}
+	return true;
+}
+
+
+public boolean StopNoteAccept() 
+{
+	try 
+	{
+		isStartStopNoteAccept=false;
+		//JxfsATM obj;
+		//objBnr.cancelWaitingCashTaken();
+		control.cancel(0);
+		
+		//obj.cancel(0);
+		return true;
+	}
+	catch ( JxfsException e)
+	{
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	return false;
+}
+
+
+public int[] GetAcceptedNoteCurrencyResponse() 
+{
+	int[] ret=new int[8];
+	ret[0]=g_5Notes;
+	ret[1]=g_10Notes;
+	ret[2]=g_20Notes;
+	ret[3]=g_50Notes;
+	ret[4]=g_100Notes;
+	ret[5]=g_200Notes;
+	ret[6]=g_500Notes;
+	ret[7]=g_2000Notes;
+	return ret;
+}
+  
+  
+class NoteAcceptThread implements Runnable
+{
+	@Override
+	public void run()
+	{
+		try
+		{
+			MEICashInOrder data = null;
+			long insertedAmount = 0;  
+			while(true)
+			{
+				if(isStartStopNoteAccept)
+				{
+					startCashInTransaction();
+					//while ((insertedAmount != amount) && !hasChange) {
+					  //System.out.println("Please insert " + CASH_IN_AMOUNT + " " + CASH_IN_CURRENCY + ".");    
+					  data = cashIn(100, "INR");
+					  insertedAmount = data.getDenomination().getAmount();      
+					  
+					  // Check if change needed
+					
+					  
+					  int amount=(int) (insertedAmount/100);
+					  switch(amount)
+					  {
+					     case 5:		  g_5Notes++;
+					    	 break;
+					     case 10:		  g_10Notes++;
+					    	 break;
+					     case 20:		  g_20Notes++;
+					    	 break;
+					     case 50:		  g_50Notes++;
+					    	 break;
+					     case 100:		  g_100Notes++;
+					    	 break;
+					     case 200:		  g_200Notes++;
+					    	 break;
+					     case 500:		  g_500Notes++;
+					    	 break;
+					     case 1000:		  g_1000Notes++;
+					    	 break;
+					     case 2000:		  g_2000Notes++;
+					    	 break;
+					    	
+					  }
+					  				  
+					//endCashInTransaction();
+				 
+				}
+				else
+				{
+					Thread.sleep(1000);
+				}
+			}
+		} 
+		catch (InterruptedException | JxfsException e) 
+		{
+		    //e.printStackTrace();
+		}
+	}
+}
+  
+  
+  
+/*  class CoinAcceptThread implements Runnable 
+  {  
+  	//public void run()
+  	//{
+  		
+         byte[] byResponse = null;
+  		
+         byte[] byCmd = new byte [] { 0x1B, 0x0A, 0x03, 0x05, 0x07 };  //Coin Accept Start					
+  		
+         int iFirstRead=0;
+         
+         byte byPreviousValue = 0x00;
+         
+        // while(true)
+  		//{
+      	   
+  	    	try
+  		    {					
+  				if(StartCoinAccept)
+  				{
+  					if(serialPort.writeBytes(byCmd))
+  					{							
+  						
+  						//byte[] byRes1 = serialPort.readBytes(1, 5000);
+  						
+  						try 
+  						{
+  							Thread.sleep(500);
+  						}
+  						catch (InterruptedException e) 
+  						{
+  							// TODO Auto-generated catch block
+  							e.printStackTrace();
+  						}
+  						
+  						byResponse = serialPort.readBytes();							
+  					
+  						
+  						if(byResponse != null &&  byResponse.length == 22)
+  						{
+  							 if (byResponse[11] != byPreviousValue && byResponse[12] != 0x00)
+  							 {
+  							 
+  								switch(byResponse[12])
+  								{
+  									case 0x04:   //1 Coin
+  									{
+  										 byPreviousValue = byResponse[11];
+  										 System.out.println("Rs.1 Coin Accepted");
+  										 g_1Coin++;
+  										 StartCoinAccept=false;// objInterfaceCoinAcceptor.CoinAcceptedEvent(1);
+  									}
+  									break;
+  									
+  									case 0x02:   //2 Coin
+  									{
+  										byPreviousValue = byResponse[11];
+  										System.out.println("Rs.2 Coin Accepted");
+  										g_2Coin++;
+  										StartCoinAccept=false;
+  										//objInterfaceCoinAcceptor.CoinAcceptedEvent(2);
+  									}
+  									break;
+  									
+  									case 0x0A:   //5 Coin
+  									{
+  										byPreviousValue = byResponse[11];
+  										System.out.println("Rs.5 Coin Accepted");
+  										g_5Coin++;
+  										StartCoinAccept=false;
+  										//objInterfaceCoinAcceptor.CoinAcceptedEvent(5);
+  									}
+  									break;
+  									
+  									case 0x0B:   //10 Coin
+  									{
+  										byPreviousValue = byResponse[11];
+  										System.out.println("Rs.10 Coin Accepted");
+  										g_10Coin++;
+  										StartCoinAccept=false;
+  										//objInterfaceCoinAcceptor.CoinAcceptedEvent(10);
+  									}
+  									break;
+  									
+  									case 0x08:   //5 Coin
+  									{
+  										byPreviousValue = byResponse[11];
+  										System.out.println("Rs.5 Coin Accepted");
+  										StartCoinAccept=false;
+  										//objInterfaceCoinAcceptor.CoinAcceptedEvent(5);
+  									}
+  									break;
+  									
+  									case 0x09:   //5 Coin
+  									{
+  										byPreviousValue = byResponse[11];
+  										System.out.println("Rs.5 Coin Accepted");
+  										g_5Coin++;
+  										StartCoinAccept=false;
+  									
+  										//objInterfaceCoinAcceptor.CoinAcceptedEvent(5);
+  									}
+  									break;
+  									case 0x06:   //2 Coin
+  									{
+  										byPreviousValue = byResponse[11];
+  										System.out.println("Rs.2 Coin Accepted");
+  										g_2Coin++;
+  										StartCoinAccept=false;
+  										//objInterfaceCoinAcceptor.CoinAcceptedEvent(2);
+  									}
+  									break;
+  								}
+  							 }
+  						}
+  					}
+  				}
+  				else
+  				{
+  					try 
+  					{
+  						
+  						Thread.sleep(1000);
+  					} 
+  					catch (InterruptedException e)
+  					{
+  						// TODO Auto-generated catch block
+  						e.printStackTrace();
+  					}
+  				}
+  		}
+  		catch (SerialPortException e) 
+  		{
+  			
+  		}
+  	// }
+    //}  
+  }
+
+*/
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+}//IntegrationSample
+
+
+
+ 

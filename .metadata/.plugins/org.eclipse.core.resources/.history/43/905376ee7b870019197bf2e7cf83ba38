@@ -1,0 +1,2287 @@
+package lipi;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
+import org.eclipse.wb.swt.SWTResourceManager;
+import jssc.SerialPort;
+import jssc.SerialPortList;
+
+public class MainWindow implements InterfaceCoinAcceptor 
+{
+
+	protected Shell shell;
+	private Text txtResponse;
+	
+	private String strOSType;
+	
+	private Label lblComPort;
+	private Combo cmbCOMPort;
+	
+	private Label lblBaudRate;
+	private Combo cmbBaudRate;
+	private static SerialPort serialPort;
+	
+	private CardReaderDispenser objCRD;
+	private CRDResponse objRes;
+	
+	/*private CommPortIdentifier portIdentifier = null;
+	private CommPort commPort = null;
+	private SerialPort serialPort = null;
+	private ParallelPort parallelPort = null;*/
+
+	/**
+	 * Launch the application.
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		try {
+			
+			MainWindow window = new MainWindow();
+			window.open();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}	
+	
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shell.open();
+		shell.layout();
+		while (!shell.isDisposed()) {
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
+	}
+	
+	public static byte GetBCC(byte []p,int n)
+	{
+		byte  ch;
+		int	i; 
+		byte crc = (byte)0x00;
+	
+		for(i=0;i<n;i++)
+		{
+			ch = p[i];				
+			crc = (byte)(ch ^ crc);
+		}		
+		return crc;
+	}
+	
+	public static String GetErrorDesc(byte byE1, byte byE0)
+	{
+		String strRes="";
+		
+		switch(String.format("%02x%02x", byE1, byE0))
+		{
+			case "0000": strRes = "Reception of undefined command";	break;
+			case "0001": strRes = "Command parameter error";	break;
+		}
+		
+		return strRes;
+	}
+
+	/**
+	 * Create contents of the window.
+	 */
+	protected void createContents() 
+	{
+		shell = new Shell();
+		shell.setSize(662, 606);
+		shell.setText("SWT Application");
+		
+		strOSType = System.getProperty("os.name").toLowerCase();
+		
+		Label lblInterfaceType = new Label(shell, SWT.NONE);
+		lblInterfaceType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblInterfaceType.setBounds(10, 20, 147, 25);
+		lblInterfaceType.setText("Interface Type COM");
+		
+		Combo cmbInterfaceType = new Combo(shell, SWT.READ_ONLY);
+		cmbInterfaceType.setItems(new String[] {"Select", "Parallel", "Serial", "USB"});
+		cmbInterfaceType.select(0);
+		cmbInterfaceType.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbInterfaceType.setBounds(163, 17, 113, 28);
+		
+		txtResponse = new Text(shell, SWT.BORDER | SWT.V_SCROLL | SWT.MULTI);
+		txtResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		txtResponse.setBounds(10, 380, 626, 143);
+		
+		Label lblResponse = new Label(shell, SWT.NONE);
+		lblResponse.setText("Response");
+		lblResponse.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblResponse.setBounds(20, 349, 72, 25);
+		
+		lblComPort = new Label(shell, SWT.NONE);
+		lblComPort.setText("Port");
+		lblComPort.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblComPort.setBounds(293, 20, 36, 25);
+		
+		cmbCOMPort = new Combo(shell, SWT.READ_ONLY);
+		if(strOSType.indexOf("win") >= 0)
+			cmbCOMPort.setItems(new String[] {"Select", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"});
+		else
+			cmbCOMPort.setItems(new String[] {"Select", "/dev/ttyS0", "/dev/ttyS1", "/dev/ttyS2", "/dev/ttyS3", "/dev/ttyS4", "/dev/ttyS5", "/dev/ttyS6", "/dev/ttyS7", "/dev/ttyS8", "/dev/ttyS9"});
+		cmbCOMPort.select(0);
+		cmbCOMPort.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbCOMPort.setBounds(335, 17, 72, 28);
+		
+		lblBaudRate = new Label(shell, SWT.NONE);
+		lblBaudRate.setText("Baud Rate");
+		lblBaudRate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblBaudRate.setBounds(439, 20, 78, 25);
+		
+		cmbBaudRate = new Combo(shell, SWT.READ_ONLY);
+		cmbBaudRate.setItems(new String[] {"Select", "115200", "9600", "19200"});
+		cmbBaudRate.select(0);
+		cmbBaudRate.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbBaudRate.setBounds(523, 17, 113, 28);
+		
+		Button btnOpen = new Button(shell, SWT.NONE);
+		btnOpen.setForeground(SWTResourceManager.getColor(SWT.COLOR_BLACK));
+		btnOpen.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnOpen.setBounds(436, 127, 159, 30);
+		btnOpen.setText("Maintaineance Mode");
+		
+		Label lblData = new Label(shell, SWT.NONE);
+		lblData.setVisible(false);
+		lblData.setText("Data");
+		lblData.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblData.setBounds(10, 257, 44, 25);
+		
+		Label lblStatus = new Label(shell, SWT.NONE);
+		lblStatus.setText("Status-");
+		lblStatus.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStatus.setBounds(10, 529, 44, 18);
+		
+		Label lblStatusVal = new Label(shell, SWT.NONE);
+		lblStatusVal.setText("");
+		lblStatusVal.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblStatusVal.setBounds(60, 529, 576, 28);
+		
+		Button btnClear = new Button(shell, SWT.NONE);		
+		btnClear.setText("Clear");
+		btnClear.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnClear.setBounds(549, 344, 87, 30);
+		
+		Button btnReset = new Button(shell, SWT.NONE);
+		btnReset.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.Reset(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Reset Response:- "+objRes.res+"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnReset.setText("Reset");
+		btnReset.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnReset.setBounds(185, 265, 124, 30);
+		//formToolkit.adapt(btnReset, true, true);
+		
+		Button btnHoperStart = new Button(shell, SWT.NONE);
+		btnHoperStart.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.Start2(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Hopper 2 Start Res:- "+objRes.res+"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnHoperStart.setText("Hoper2 Start");
+		btnHoperStart.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnHoperStart.setBounds(252, 221, 110, 30);
+		//formToolkit.adapt(btnHoperStart, true, true);
+		
+		Button btnHopperStop = new Button(shell, SWT.NONE);
+		btnHopperStop.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.Stop2(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Hopper 2 Stop Res:- "+objRes.res+"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnHopperStop.setText("Hopper2 Stop");
+		btnHopperStop.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnHopperStop.setBounds(368, 221, 110, 30);
+		//formToolkit.adapt(btnHopperStop, true, true);
+		
+		Button btnHopperStart = new Button(shell, SWT.NONE);
+		btnHopperStart.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.Start1(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Hopper 1 Start Res:- "+objRes.res +"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnHopperStart.setText("Hopper1 Start");
+		btnHopperStart.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnHopperStart.setBounds(20, 221, 110, 30);
+		//formToolkit.adapt(btnHopperStart, true, true);
+		
+		Button btnEmptyContainer = new Button(shell, SWT.NONE);
+		btnEmptyContainer.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.EmptyContainer1(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									txtResponse.append("Empty 1 Container Res:- "+objRes.res+"\r\n");
+									
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnEmptyContainer.setGrayed(true);
+		btnEmptyContainer.setText("Empty Container1");
+		btnEmptyContainer.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnEmptyContainer.setBounds(20, 174, 136, 30);
+		//formToolkit.adapt(btnEmptyContainer, true, true);
+		
+		Button btnEmptyContainer_1 = new Button(shell, SWT.NONE);
+		btnEmptyContainer_1.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.EmptyContainer2(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									txtResponse.append("Empty 2 Container Res:- "+objRes.res+"\r\n");
+									
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnEmptyContainer_1.setText("Empty Container2");
+		btnEmptyContainer_1.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnEmptyContainer_1.setBounds(162, 174, 136, 30);
+		//formToolkit.adapt(btnEmptyContainer_1, true, true);
+		
+		Button btnHopperStop_1 = new Button(shell, SWT.NONE);
+		btnHopperStop_1.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.Stop1(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Hopper 1 Stop Res:- "+objRes.res+"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnHopperStop_1.setText("Hopper1 Stop");
+		btnHopperStop_1.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnHopperStop_1.setBounds(136, 221, 110, 30);
+		//formToolkit.adapt(btnHopperStop_1, true, true);
+		
+		Button btnDebugContainer = new Button(shell, SWT.NONE);
+		btnDebugContainer.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.DebugContainer1(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Debug 1 Container Res:- "+objRes.res+"\r\n");
+									
+									
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnDebugContainer.setText("Debug Container1");
+		btnDebugContainer.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnDebugContainer.setBounds(304, 174, 136, 30);
+		//formToolkit.adapt(btnDebugContainer, true, true);
+		
+		Button btnDebugContainer_1 = new Button(shell, SWT.NONE);
+		btnDebugContainer_1.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.DebugContainer2(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Debug 2 Container Res:- "+objRes.res+"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnDebugContainer_1.setText("Debug Container2");
+		btnDebugContainer_1.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnDebugContainer_1.setBounds(453, 174, 142, 30);
+		//formToolkit.adapt(btnDebugContainer_1, true, true);
+		
+		Button btnLivePacket = new Button(shell, SWT.NONE);
+		btnLivePacket.addSelectionListener(new SelectionAdapter() {
+
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.livepacket(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Live Packet Response:- "+objRes.res+"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+										//btnClose.setEnabled(true);
+										
+										//btnStartCoinAccept.setEnabled(true);
+										//btnStopCoinAccept.setEnabled(true);								
+										
+									
+										
+//										txtResponse.append("String- ");
+//										for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+//										{
+//											String strRecvd = new String(objRes.bData, iIndex, 1);
+//											txtResponse.append(strRecvd);
+//										}
+//										txtResponse.append("\r\n");
+//										
+//										txtResponse.append("Hex- ");
+//										for(int iIndex = 0; iIndex < objRes.bData.length; iIndex++)
+//										{
+//											//String.format("%02X", byResponse[iIndex])
+//											//String strRecvd = new String(byResponse, iIndex, 1);
+//											txtResponse.append(String.format("%02X ", objRes.bData[iIndex]));
+//										}
+//										txtResponse.append("\r\n");
+//										
+//										txtResponse.append("st0- " + objRes.strST0_Desc);						
+//										txtResponse.append("\r\n");							
+//										txtResponse.append("st1- " + objRes.strST1_Desc);
+//										txtResponse.append("\r\n");							
+//										txtResponse.append("st2- " + objRes.strST2_Desc);		
+									}*/
+									
+									/*portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open(this.getClass().getName(),2000);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof SerialPort )
+										{
+											serialPort = (SerialPort) commPort;
+											serialPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											serialPort.enableReceiveTimeout(1000);
+											if(serialPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);
+												
+												//iStatus = getVersion();
+												//webcam = Webcam.getDefault();						
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+												//iStatus = -1;
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+											//iStatus = -1;
+										}
+									}*/
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} /*catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		
+		});
+		btnLivePacket.setText("Live Packet");
+		btnLivePacket.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnLivePacket.setBounds(485, 221, 110, 30);
+		//formToolkit.adapt(btnLivePacket, true, true);
+		
+		Button btnInitializeDevice = new Button(shell, SWT.NONE);
+		btnInitializeDevice.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.Initialize(str, Integer.parseInt(cmbBaudRate.getText()));
+									
+									
+									txtResponse.append(objRes.res+"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnInitializeDevice.setText("Initialize COM Device");
+		btnInitializeDevice.setForeground(SWTResourceManager.getColor(SWT.COLOR_BLACK));
+		btnInitializeDevice.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnInitializeDevice.setBounds(20, 127, 185, 30);
+		//formToolkit.adapt(btnInitializeDevice, true, true);
+		
+		Button btnDispence = new Button(shell, SWT.NONE);
+		btnDispence.addSelectionListener(new SelectionAdapter()
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.Dispence(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Dispence Response:- "+objRes.res+"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		btnDispence.setText("Dispence");
+		btnDispence.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnDispence.setBounds(315, 265, 115, 30);
+		//formToolkit.adapt(btnDispence, true, true);
+		
+		Label lblInterfaceTypeReader = new Label(shell, SWT.NONE);
+		lblInterfaceTypeReader.setText("Interface Type Reader");
+		lblInterfaceTypeReader.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		lblInterfaceTypeReader.setBounds(10, 65, 147, 25);
+		//formToolkit.adapt(lblInterfaceTypeReader, true, true);
+		
+		Combo cmbInterfaceType11 = new Combo(shell, SWT.READ_ONLY);
+		cmbInterfaceType11.setItems(new String[] {"Select", "Parallel", "Serial", "USB"});
+		cmbInterfaceType11.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbInterfaceType11.setBounds(163, 65, 113, 28);
+		//formToolkit.adapt(combo);
+		//formToolkit.paintBordersFor(combo);
+		cmbInterfaceType11.select(0);
+		
+		Label label = new Label(shell, SWT.NONE);
+		label.setText("Port");
+		label.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		label.setBounds(293, 65, 36, 25);
+		//formToolkit.adapt(label, true, true);
+		
+		Combo cmbCOMPort11 = new Combo(shell, SWT.READ_ONLY);
+		cmbCOMPort11.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbCOMPort11.setBounds(335, 62, 72, 28);
+		//formToolkit.adapt(combo_1);
+		//formToolkit.paintBordersFor(combo_1);
+		cmbCOMPort11.select(0);
+		
+		Label label_1 = new Label(shell, SWT.NONE);
+		label_1.setText("Baud Rate");
+		label_1.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		label_1.setBounds(439, 65, 78, 25);
+		//formToolkit.adapt(label_1, true, true);
+		
+		Combo cmbBaudRate11 = new Combo(shell, SWT.READ_ONLY);
+		cmbBaudRate11.setItems(new String[] {"Select", "115200", "9600", "19200"});
+		cmbBaudRate11.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		cmbBaudRate11.setBounds(523, 62, 113, 28);
+		//formToolkit.adapt(combo_2);
+		//formToolkit.paintBordersFor(combo_2);
+		cmbBaudRate11.select(0);
+		
+	
+		//formToolkit.adapt(btnInitializeReaderDevice, true, true);
+		shell.setTabList(new Control[]{cmbInterfaceType, cmbCOMPort, cmbBaudRate, btnOpen, btnClear, txtResponse});
+		
+		// Interface selection functioning
+		cmbInterfaceType.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				//txtResponse.setText(cmbInterfaceType.getText());
+				switch(cmbInterfaceType.getText())
+				{
+					case "Serial":
+					{
+						cmbCOMPort.removeAll();
+						cmbCOMPort.add("Select");
+						
+						String[] strPortNames = SerialPortList.getPortNames();
+						
+						for(int iIndex = 0; iIndex < strPortNames.length; iIndex++)
+						{
+							cmbCOMPort.add(strPortNames[iIndex]);
+						}
+						
+						/*Enumeration port_list = CommPortIdentifier.getPortIdentifiers(); 
+						//Enumeration generates a series of elements, one at a time.
+						while (port_list.hasMoreElements()) //Tests if enumeration contains more elements
+						{
+							CommPortIdentifier port_id = (CommPortIdentifier)port_list.nextElement();
+							if (port_id.getPortType() == CommPortIdentifier.PORT_SERIAL)
+							{
+								cmbCOMPort.add(port_id.getName());
+								System.out.println ("Serial port: " + port_id.getName());
+							}							
+						}*/
+						
+						lblComPort.setVisible(true);
+						cmbCOMPort.setVisible(true);
+						cmbCOMPort.select(0);
+						
+						lblBaudRate.setVisible(true);
+						cmbBaudRate.setVisible(true);
+						cmbBaudRate.select(0);
+					}
+					break;
+					case "Parallel":
+					{
+						cmbCOMPort.removeAll();
+						cmbCOMPort.add("Select");
+						
+						/*Enumeration port_list = CommPortIdentifier.getPortIdentifiers(); 
+						//Enumeration generates a series of elements, one at a time.
+						while (port_list.hasMoreElements()) //Tests if enumeration contains more elements
+						{
+							CommPortIdentifier port_id = (CommPortIdentifier)port_list.nextElement();
+							if (port_id.getPortType() == CommPortIdentifier.PORT_PARALLEL)
+							{
+								cmbCOMPort.add(port_id.getName());
+								System.out.println ("Parallel port: " + port_id.getName());
+							}							
+						}*/
+						
+						lblComPort.setVisible(true);
+						cmbCOMPort.setVisible(true);
+						cmbCOMPort.select(0);
+						
+						//lblComPort.setVisible(false);
+						//cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+					default:
+					{
+						lblComPort.setVisible(false);
+						cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+				}				
+			}
+		});
+		
+		cmbInterfaceType11.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				//txtResponse.setText(cmbInterfaceType.getText());
+				switch(cmbInterfaceType.getText())
+				{
+					case "Serial":
+					{
+						cmbCOMPort11.removeAll();
+						cmbCOMPort11.add("Select");
+						
+						String[] strPortNames = SerialPortList.getPortNames();
+						
+						for(int iIndex = 0; iIndex < strPortNames.length; iIndex++)
+						{
+							cmbCOMPort11.add(strPortNames[iIndex]);
+						}
+						
+						
+						
+						//lblComPort.setVisible(true);
+						cmbCOMPort11.setVisible(true);
+						cmbCOMPort11.select(0);
+						
+						//lblBaudRate.setVisible(true);
+						cmbBaudRate11.setVisible(true);
+						cmbBaudRate11.select(0);
+					}
+					break;
+					case "Parallel":
+					{
+						cmbCOMPort.removeAll();
+						cmbCOMPort.add("Select");
+						
+						/*Enumeration port_list = CommPortIdentifier.getPortIdentifiers(); 
+						//Enumeration generates a series of elements, one at a time.
+						while (port_list.hasMoreElements()) //Tests if enumeration contains more elements
+						{
+							CommPortIdentifier port_id = (CommPortIdentifier)port_list.nextElement();
+							if (port_id.getPortType() == CommPortIdentifier.PORT_PARALLEL)
+							{
+								cmbCOMPort.add(port_id.getName());
+								System.out.println ("Parallel port: " + port_id.getName());
+							}							
+						}*/
+						
+						lblComPort.setVisible(true);
+						cmbCOMPort.setVisible(true);
+						cmbCOMPort.select(0);
+						
+						//lblComPort.setVisible(false);
+						//cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+					default:
+					{
+						lblComPort.setVisible(false);
+						cmbCOMPort.setVisible(false);
+						
+						lblBaudRate.setVisible(false);
+						cmbBaudRate.setVisible(false);
+					}
+					break;
+				}				
+			}
+		});
+		
+		
+		
+		Button btnInitializeReaderDevice = new Button(shell, SWT.NONE);
+		btnInitializeReaderDevice.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType11.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort11.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate11.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort11.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.InitializeReader(str, Integer.parseInt(cmbBaudRate11.getText()));
+									
+									
+									txtResponse.append(objRes.res+"\r\n");
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						
+					}
+					
+				}
+			}
+		});
+		
+		
+		btnInitializeReaderDevice.setText("Initialize Reader Device");
+		btnInitializeReaderDevice.setForeground(SWTResourceManager.getColor(SWT.COLOR_BLACK));
+		btnInitializeReaderDevice.setFont(SWTResourceManager.getFont("Segoe UI", 11, SWT.NORMAL));
+		btnInitializeReaderDevice.setBounds(222, 127, 199, 30);
+		
+		// Open button functioning
+		btnOpen.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{   
+				lblStatusVal.setText("");
+				
+				if(cmbInterfaceType.getSelectionIndex() == 0)
+				{
+					lblStatusVal.setText("Select interface type first");
+				}
+				else
+				{
+					switch(cmbInterfaceType.getSelectionIndex())
+					{
+						case 1:		//Parallel
+						{
+							/*try
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									portIdentifier = CommPortIdentifier.getPortIdentifier(str);					
+									if ( portIdentifier.isCurrentlyOwned() )
+									{
+										//System.out.println("Error: Port is currently in use");
+										lblStatusVal.setText("Port is already open");
+										//WriteLog(portIdentifier.getCurrentOwner());
+									}
+									else
+									{
+										//System.out.println("Success");
+										commPort = portIdentifier.open("CommTest", 50);
+										
+										//System.out.println(commPort);
+										
+										if (commPort instanceof ParallelPort )
+										{
+											parallelPort = (ParallelPort) commPort;
+											//parallelPort.setSerialPortParams(Integer.parseInt(cmbBaudRate.getText()),SerialPort.DATABITS_8,SerialPort.STOPBITS_2,SerialPort.PARITY_NONE);
+											parallelPort.enableReceiveTimeout(1000);
+											if(parallelPort != null)
+											{
+												lblStatusVal.setText("Port opened");
+												btnOpen.setEnabled(false);
+												btnClose.setEnabled(true);
+												
+												btnVersion.setEnabled(true);
+												btnStatus.setEnabled(true);												
+											}
+											else
+											{
+												lblStatusVal.setText("Port could not be opened");
+											}
+										}
+										else
+										{
+											lblStatusVal.setText("Port could not be opened");
+										}
+									}
+								}
+							} catch (NumberFormatException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (NoSuchPortException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (PortInUseException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} catch (UnsupportedCommOperationException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}*/
+						}
+						break;
+						case 2:		//Serial Commun
+						{
+							try 
+							{
+								if(cmbCOMPort.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port number");
+								}
+								else if(cmbBaudRate.getSelectionIndex() == 0)
+								{
+									lblStatusVal.setText("Select port baud rate");
+								}
+								else
+								{
+									String str = cmbCOMPort.getText();
+									
+									if(objCRD == null)
+										objCRD = new CardReaderDispenser();
+									
+									//txtResponse.setText("");
+									
+									objRes = objCRD.Maintaineance(str, Integer.parseInt(cmbBaudRate.getText()));
+									txtResponse.append("Maintaineance Response:- "+objRes.res+"\r\n");
+									
+									switch(objRes.res)
+									{
+									
+									case "AA 4f 55 54 4f 46 53 99" :txtResponse.append("\r\n");
+										break;
+									case "AA 52 53 49 48 32 08 99" :txtResponse.append("\r\n");
+										break;
+									case "AA 4E 02 00 00 08 00 99" :txtResponse.append("\r\n");
+										break;
+									case "AA 4E 02 01 00 08 00 99" :txtResponse.append("\r\n");
+										break;
+									case "AA 4E 02 02 00 08 00 99" :txtResponse.append("\r\n");
+										break;
+									case "AA 4E 02 11 00 08 00 99" :txtResponse.append("\r\n");
+										break;
+									case "AA 44 01 03 01 08 00 99" :txtResponse.append("\r\n");
+										break;
+									case "AA 44 01 04 01 08 00 99" :txtResponse.append("\r\n");
+										break;
+									case "AA 44 01 05 01 08 00 99" :txtResponse.append("\r\n");
+										break;
+									default: txtResponse.append("\r\n");
+										break;
+									
+									}
+									
+									/*if(objRes.bResponse)
+									{
+										lblStatusVal.setText("Port opened");
+										cmbInterfaceType.setEnabled(false);
+										cmbCOMPort.setEnabled(false);
+										cmbBaudRate.setEnabled(false);
+										btnOpen.setEnabled(false);
+									}*/
+								}
+							} 
+							catch (NumberFormatException e1)
+							{
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							} 
+						}
+						break;
+						case 3:		//USB
+						{
+							
+						}
+						break;
+					}
+					//System.out.println("Button selected");
+				}
+			}
+		});
+		
+		// Clear button functioning
+		btnClear.addSelectionListener(new SelectionAdapter() 
+		{
+			@Override
+			public void widgetSelected(SelectionEvent e) 
+			{
+				try
+				{
+					txtResponse.setText("");
+				}
+				catch(Exception e1)
+				{
+					e1.printStackTrace();
+				}
+			}
+		});
+	}
+
+	@Override
+	public void CoinAcceptedEvent(int iDenomValue) 
+	{
+		// TODO Auto-generated method stub
+		System.out.println("Coin accepted- " + iDenomValue + "\r\n");
+	}
+}

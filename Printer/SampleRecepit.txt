@@ -1,0 +1,29 @@
+
+a!1ICICI Bank
+
+!BHARTI HEXACOM LTD
+TOWN HALL ROAD
+UDAIPUR       RAJ
+a Date/Time   : 11/09/07                   09:47:35
+AID:11520604              TID:15053804
+BATCH NUM   : 000754      INVOICE NUM : 000504
+a!1Sale
+a !CARD NUM : **** **** **** 1956 Swipe
+EXP DATE : 11/08        CARD TYPE:VISA CARD
+APPR CODE: 096307       RREF NUM :000000000692
+!AMOUNT :                      Rs   1,035.00
+
+
+
+
+
+!SIGN:______________________________________
+a!ANIL/SHARMA
+!AGREE TO PAY AS PER CARD ISSUER AGREMNT
+
+
+***** CUSTOMER COPY *****
+MVersion I-03.03
+
+V
+@

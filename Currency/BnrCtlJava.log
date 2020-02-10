@@ -1,0 +1,200 @@
+2019-11-17 13:45:19 INFO  BnrCtlNativeAdapter - Windows 10, x86
+2019-11-17 13:45:19 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Windows. Architecture: x86.
+2019-11-17 13:45:20 INFO  BnrCtlNativeAdapter - Current working directory: D:\LakshyaSanadhya\BKP\EclipseKolKataMetro\Currency
+2019-11-17 13:45:20 INFO  BnrCtlNativeAdapter - Directory of the jar library: D:\LakshyaSanadhya\BKP\EclipseKolKataMetro\AVRM\lib
+2019-11-17 13:45:20 ERROR BnrCtlNativeAdapter - com.sun.jna.NativeLibrary - loadLibrary. Native library wasn't found. Unable to load library 'BnrCtlW32Jna': Native library (win32-x86/BnrCtlW32Jna.dll) not found in resource path ([file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/resources.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/rt.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/jsse.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/jce.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/charsets.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/jfr.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/access-bridge-32.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/cldrdata.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/dnsns.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/jaccess.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/jfxrt.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/localedata.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/nashorn.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/sunec.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/sunjce_provider.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/sunmscapi.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/sunpkcs11.jar, file:/C:/Program%20Files%20(x86)/Java/jre1.8.0_211/lib/ext/zipfs.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/Currency/bin/, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/Currency/Lib/jssc-2.8.0.jar, file:/D:/LakshyaSanadhya/eclipse-java-photon-R-win32/eclipse/plugins/org.eclipse.swt.win32.win32.x86_3.107.0.v20180611-0422.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/bin/, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/jssc-2.8.0.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/BnrCtlJava_2.0.0.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/BnrDevice_2.0.0.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/BnrJxfsService_2.0.0.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/BnrUsbDriver_2.0.0.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/jna-4.1.0.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/jxfsclient3.0.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/jxfsserver3.0.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/log4j-1.2.15.jar, file:/D:/LakshyaSanadhya/BKP/EclipseKolKataMetro/AVRM/lib/BNR.jar])
+2019-11-17 21:53:12 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-17 21:53:12 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-17 21:53:12 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-17 21:53:12 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2019-11-17 21:53:12 ERROR BnrCtlNativeAdapter - com.sun.jna.NativeLibrary - loadLibrary. Native library wasn't found. Unable to load library 'BnrCtlL32Jna': Native library (linux-x86/libBnrCtlL32Jna.so) not found in resource path ([file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/bin/, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/jssc-2.8.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/bin/, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jssc-2.8.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrCtlJava_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrDevice_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrJxfsService_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrUsbDriver_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jna-4.1.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jxfsclient3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jxfsserver3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/log4j-1.2.15.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BNR.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/org.eclipse.swt.gtk.linux.x86_3.104.2.v20160212-1350.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/BnrCtlJava_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/BnrDevice_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/BnrJxfsService_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/BnrUsbDriver_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/jna-4.1.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/jxfsclient3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/jxfsserver3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/log4j-1.2.15.jar])
+2019-11-17 21:55:37 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-17 21:55:37 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-17 21:55:37 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-17 21:55:37 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2019-11-17 21:55:37 ERROR BnrCtlNativeAdapter - com.sun.jna.NativeLibrary - loadLibrary. Native library wasn't found. Unable to load library 'BnrCtlL32Jna': Native library (linux-x86/libBnrCtlL32Jna.so) not found in resource path ([file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/bin/, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/jssc-2.8.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/bin/, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jssc-2.8.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrCtlJava_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrDevice_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrJxfsService_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrUsbDriver_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jna-4.1.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jxfsclient3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jxfsserver3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/log4j-1.2.15.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BNR.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/org.eclipse.swt.gtk.linux.x86_3.104.2.v20160212-1350.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/BnrCtlJava_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/BnrDevice_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/BnrJxfsService_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/BnrUsbDriver_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/jna-4.1.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/jxfsclient3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/jxfsserver3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/log4j-1.2.15.jar])
+2019-11-17 22:05:01 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-17 22:05:01 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-17 22:05:02 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-17 22:05:02 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2019-11-17 22:05:04 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 11:30:56 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 11:30:56 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 11:30:56 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 11:30:56 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 11:30:56 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 11:32:01 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 11:32:01 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 11:32:01 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 11:32:01 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 11:32:01 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 11:32:50 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 11:32:50 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 11:32:50 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 11:32:50 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 11:32:50 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 11:33:12 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 11:33:12 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 11:33:12 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 11:33:12 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 11:33:12 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 13:44:01 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 13:44:01 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 13:44:02 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 13:44:02 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 13:44:02 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 13:47:41 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 13:47:41 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 13:47:41 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 13:47:41 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 13:47:41 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 13:51:53 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 13:51:53 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 13:51:53 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 13:51:53 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 13:51:53 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 13:52:02 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 13:52:02 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 13:52:02 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 13:52:02 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 13:52:03 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 14:03:45 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 14:03:45 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 14:03:45 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 14:03:45 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 14:03:45 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-18 16:42:53 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-18 16:42:53 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-18 16:42:53 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-18 16:42:53 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-18 16:42:53 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-19 13:35:21 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-19 13:35:21 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-19 13:35:21 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-19 13:35:21 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-19 13:35:21 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2019-11-21 14:11:08 INFO  BnrCtlNativeAdapter - Linux, i386
+2019-11-21 14:11:08 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2019-11-21 14:11:08 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2019-11-21 14:11:08 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2019-11-21 14:11:08 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-07 15:11:55 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-07 15:11:55 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-07 15:11:55 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-07 15:11:55 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2020-01-07 15:11:55 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-17 12:51:50 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-17 12:51:50 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-17 12:51:50 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-17 12:51:50 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-17 12:51:50 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-17 12:51:54 ERROR Bnr - com.mei.bnr.exception.BnrExceptionSimpleFactory - createException. The API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-17 12:51:54 WARN  AttachDeviceListChangeEventHandler - AttachDeviceListChangeEventHandler - subscribeThe API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-17 12:53:23 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-17 12:53:23 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-17 12:53:23 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-17 12:53:23 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-17 12:53:23 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-17 12:53:24 ERROR Bnr - com.mei.bnr.exception.BnrExceptionSimpleFactory - createException. The API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-17 12:53:24 WARN  AttachDeviceListChangeEventHandler - AttachDeviceListChangeEventHandler - subscribeThe API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-17 12:54:11 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-17 12:54:11 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-17 12:54:11 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-17 12:54:11 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-17 12:54:11 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-17 12:54:13 ERROR Bnr - com.mei.bnr.exception.BnrExceptionSimpleFactory - createException. The API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-17 12:54:13 WARN  AttachDeviceListChangeEventHandler - AttachDeviceListChangeEventHandler - subscribeThe API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-18 11:25:59 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-18 11:25:59 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-18 11:25:59 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-18 11:25:59 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-18 11:25:59 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-23 03:48:01 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-23 03:48:01 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-23 03:48:01 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-23 03:48:01 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-23 03:48:01 ERROR BnrCtlNativeAdapter - com.sun.jna.NativeLibrary - loadLibrary. Native library wasn't found. Unable to load library 'BnrCtlL32Jna': Native library (linux-x86/libBnrCtlL32Jna.so) not found in resource path ([file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/bin/, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/org.eclipse.swt.gtk.linux.x86_3.104.2.v20160212-1350.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/bin/, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrCtlJava_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrDevice_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrJxfsService_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/BnrUsbDriver_2.0.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jna-4.1.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jssc-2.8.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jxfsclient3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/jxfsserver3.0.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib/log4j-1.2.15.jar, file:/home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib/AVRMApi.jar])
+2020-01-23 04:06:45 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-23 04:06:45 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-23 04:06:45 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-23 04:06:45 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-23 04:06:45 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 00:38:31 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 00:38:31 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 00:38:31 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 00:38:31 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 00:38:31 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 01:01:48 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 01:01:48 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 01:01:48 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 01:01:48 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 01:01:48 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 08:24:15 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 08:24:15 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 08:24:15 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 08:24:15 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 08:24:15 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 08:27:19 ERROR Bnr - com.mei.bnr.exception.BnrExceptionSimpleFactory - createException. The API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-24 08:27:19 WARN  AttachDeviceListChangeEventHandler - AttachDeviceListChangeEventHandler - subscribeThe API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-24 08:27:33 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 08:27:33 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 08:27:33 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 08:27:33 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 08:27:33 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 08:28:29 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 08:28:29 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 08:28:29 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 08:28:29 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 08:28:29 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 08:28:55 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 08:28:55 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 08:28:55 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 08:28:55 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 08:28:55 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 08:29:13 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 08:29:13 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 08:29:13 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 08:29:13 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 08:29:13 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 08:29:48 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 08:29:48 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 08:29:48 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 08:29:48 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 08:29:49 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 08:31:49 ERROR Bnr - com.mei.bnr.exception.BnrExceptionSimpleFactory - createException. The API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-24 08:31:49 WARN  AttachDeviceListChangeEventHandler - AttachDeviceListChangeEventHandler - subscribeThe API was not able to delay-load something it needs (e.g. a DLL)
+2020-01-24 08:46:57 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 08:46:57 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 08:46:57 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 08:46:57 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 08:46:58 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 14:35:34 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 14:35:34 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 14:35:34 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 14:35:34 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/Currency/Lib
+2020-01-24 14:35:34 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 16:40:22 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 16:40:22 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 16:40:22 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 16:40:22 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 16:40:23 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 16:42:10 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 16:42:10 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 16:42:10 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 16:42:10 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 16:42:10 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-24 16:59:07 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-24 16:59:07 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-24 16:59:08 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-24 16:59:08 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-24 16:59:09 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-01-28 23:15:00 INFO  BnrCtlNativeAdapter - Linux, i386
+2020-01-28 23:15:00 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Linux. Architecture: x86.
+2020-01-28 23:15:00 INFO  BnrCtlNativeAdapter - Current working directory: /home/lipi/Desktop/EclipseKolKataMetro/Currency
+2020-01-28 23:15:00 INFO  BnrCtlNativeAdapter - Directory of the jar library: /home/lipi/Desktop/EclipseKolKataMetro/AVRM/lib
+2020-01-28 23:15:01 INFO  BnrCtlNativeAdapter - Native library loaded successfully: BnrCtlL32Jna
+2020-02-10 12:30:58 INFO  BnrCtlNativeAdapter - Windows 10, amd64
+2020-02-10 12:30:58 INFO  BnrCtlNativeAdapter - Platform recognized to load lib. OS: Windows. Architecture: x86.
+2020-02-10 12:30:59 INFO  BnrCtlNativeAdapter - Current working directory: D:\EclipseKolKataMetroFinal\Currency
+2020-02-10 12:30:59 INFO  BnrCtlNativeAdapter - Directory of the jar library: D:\EclipseKolKataMetroFinal\AVRM\lib
+2020-02-10 12:30:59 ERROR BnrCtlNativeAdapter - com.sun.jna.NativeLibrary - loadLibrary. Native library wasn't found. Unable to load library 'BnrCtlW32Jna': Native library (win32-x86-64/BnrCtlW32Jna.dll) not found in resource path ([file:/D:/EclipseKolKataMetroFinal/Currency/bin/, file:/D:/EclipseKolKataMetroFinal/Currency/Lib/org.eclipse.swt.gtk.linux.x86_3.104.2.v20160212-1350.jar, file:/D:/EclipseKolKataMetroFinal/Currency/Lib/AVRMApi.jar, file:/D:/EclipseKolKataMetroFinal/AVRM/bin/, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/BnrCtlJava_2.0.0.jar, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/BnrDevice_2.0.0.jar, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/BnrJxfsService_2.0.0.jar, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/BnrUsbDriver_2.0.0.jar, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/jna-4.1.0.jar, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/jssc-2.8.0.jar, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/jxfsclient3.0.jar, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/jxfsserver3.0.jar, file:/D:/EclipseKolKataMetroFinal/AVRM/lib/log4j-1.2.15.jar])
